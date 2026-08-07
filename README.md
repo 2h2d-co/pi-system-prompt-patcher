@@ -1,6 +1,6 @@
 # pi-system-prompt-patcher
 
-Patch provider system prompts with exact, config-driven replacements.
+Patch provider system prompts with exact, provider-aware, config-driven replacements.
 
 The extension rewrites the `system` field in compatible provider requests immediately before Pi
 sends them. It supports string prompts and arrays of text content blocks, and ignores request
@@ -25,6 +25,34 @@ Pi packages run with full system access. Review the source before installation.
 Create `~/.pi/agent/pi-system-prompt-patcher.json`:
 
 ```json
+{
+  "providers": {
+    "cult": {
+      "replacementFile": "replacements/cult.json",
+      "models": {
+        "ritual-2": "replacements/cult-ritual-2.json"
+      }
+    },
+    "other-provider": {
+      "replacementFile": "/absolute/path/to/replacements.json"
+    }
+  }
+}
+```
+
+When `PI_CODING_AGENT_DIR` is set, the extension reads the configuration from that directory
+instead of `~/.pi/agent`.
+
+Provider and model names are matched exactly. A model-specific file takes precedence over its
+provider file. A provider can omit `replacementFile` when it only configures model-specific files.
+Requests without a matching provider or model configuration are left unchanged.
+
+Relative replacement file paths are resolved from the directory containing the settings file.
+Absolute paths and paths beginning with `~` are also supported.
+
+Each replacement file contains an array:
+
+```json
 [
   {
     "target": "Exact text from the original system prompt",
@@ -33,19 +61,17 @@ Create `~/.pi/agent/pi-system-prompt-patcher.json`:
 ]
 ```
 
-When `PI_CODING_AGENT_DIR` is set, the extension reads the configuration from that directory
-instead of `~/.pi/agent`.
-
 Replacements are:
 
 - applied in array order;
 - applied to every occurrence of each target;
-- loaded again for every provider request, so configuration changes do not require `/reload`;
+- selected by provider and, when configured, model;
+- loaded again with the settings for every provider request, so changes do not require `/reload`;
 - applied atomically—the provider payload is not mutated.
 
 If a target is absent, the extension leaves the request unchanged, reports the missing target,
-and aborts the current agent turn. Invalid or unreadable configuration is reported and the request
-continues unchanged.
+and aborts the current agent turn. Invalid or unreadable settings and replacement files are
+reported and the request continues unchanged.
 
 ## Development
 

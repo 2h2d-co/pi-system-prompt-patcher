@@ -1,0 +1,34 @@
+[
+  {
+    "target": "You are an expert coding assistant operating inside pi, a coding agent harness.",
+    "replacement": "You are an expert coding assistant operating inside cult code, a coding agent harness."
+  },
+  {
+    "target": "/Users/kaan/.pi/pi-coding-agent/",
+    "replacement": "/Users/kaan/.cult-code/cult-code-coding-agent/"
+  },
+  {
+    "target": "~/.pi/agent/",
+    "replacement": "~/.cult-code/agent/"
+  },
+  {
+    "target": "Pi documentation (read only when the user asks about pi itself, its SDK, extensions, themes, skills, or TUI):",
+    "replacement": "Cult Code documentation (read only when the user asks about cult code itself, its SDK, extensions, themes, skills, or TUI):"
+  },
+  {
+    "target": "- When reading pi docs or examples, resolve docs/... under Additional docs and examples/... under Examples, not the current working directory",
+    "replacement": "- When reading cult code docs or examples, resolve docs/... under Additional docs and examples/... under Examples, not the current working directory"
+  },
+  {
+    "target": "pi packages (docs/packages.md)",
+    "replacement": "cult code packages (docs/packages.md)"
+  },
+  {
+    "target": "- When working on pi topics, read the docs and examples, and follow .md cross-references before implementing",
+    "replacement": "- When working on cult code topics, read the docs and examples, and follow .md cross-references before implementing"
+  },
+  {
+    "target": "- Always read pi .md files completely and follow links to related docs (e.g., tui.md for TUI API details)",
+    "replacement": "- Always read cult code .md files completely and follow links to related docs (e.g., tui.md for TUI API details)"
+  }
+]

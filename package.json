@@ -7,9 +7,9 @@
     "pi-package",
     "system-prompt"
   ],
-  "homepage": "https://github.com/kaanozdokmeci/pi-system-prompt-patcher#readme",
+  "homepage": "https://github.com/2h2d-co/pi-system-prompt-patcher#readme",
   "bugs": {
-    "url": "https://github.com/kaanozdokmeci/pi-system-prompt-patcher/issues"
+    "url": "https://github.com/2h2d-co/pi-system-prompt-patcher/issues"
   },
   "license": "MIT",
   "author": {
@@ -19,7 +19,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kaanozdokmeci/pi-system-prompt-patcher.git"
+    "url": "git+https://github.com/2h2d-co/pi-system-prompt-patcher.git"
   },
   "files": [
     "extensions/pi-system-prompt-patcher/index.ts",

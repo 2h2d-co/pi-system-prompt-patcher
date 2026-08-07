@@ -4,4 +4,4 @@
 
 ### Added
 
-- Config-driven, atomic system prompt replacements for compatible provider requests.
+- Provider- and model-aware replacement file routing with atomic system prompt patching.
