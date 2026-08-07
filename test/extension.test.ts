@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import extension from "../extensions/pi-system-prompt-patcher/index.ts";
+import extension from "../extensions/index.ts";
 
 const SETTINGS_FILE = "pi-system-prompt-patcher.json";
 const CULT_FIXTURE_FILE = "cult-system-prompt-replacements.json";
