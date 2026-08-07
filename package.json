@@ -1,0 +1,57 @@
+{
+  "name": "pi-system-prompt-patcher",
+  "version": "0.0.1-alpha.0",
+  "description": "Patch provider system prompts with exact, config-driven replacements.",
+  "keywords": [
+    "pi-extension",
+    "pi-package",
+    "system-prompt"
+  ],
+  "homepage": "https://github.com/kaanozdokmeci/pi-system-prompt-patcher#readme",
+  "bugs": {
+    "url": "https://github.com/kaanozdokmeci/pi-system-prompt-patcher/issues"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Kaan Ozdokmeci",
+    "email": "kaan@ozdokmeci.com",
+    "url": ""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kaanozdokmeci/pi-system-prompt-patcher.git"
+  },
+  "files": [
+    "extensions/pi-system-prompt-patcher/index.ts",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "scripts": {
+    "check": "hk check --all --check",
+    "test": "node --test --test-concurrency=1 test/*.test.ts",
+    "fmt": "oxfmt",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "0.83.0",
+    "@types/node": "22.20.1",
+    "oxfmt": "0.60.0",
+    "oxlint": "1.75.0",
+    "oxlint-tsgolint": "7.0.2001",
+    "typescript": "7.0.2"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": ">=0.83.0 <0.84.0"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions/pi-system-prompt-patcher/index.ts"
+    ]
+  }
+}
