@@ -1,6 +1,6 @@
 {
   "name": "pi-system-prompt-patcher",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Patch provider system prompts with exact, config-driven replacements.",
   "keywords": [
     "pi-extension",
