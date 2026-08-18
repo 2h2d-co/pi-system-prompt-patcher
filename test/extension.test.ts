@@ -19,7 +19,7 @@ type Replacement = {
   replacement: string;
 };
 
-void test("ignores payloads without a system field", () => {
+test("ignores payloads without a system field", () => {
   const handler = registerExtension();
   const { ctx, notifications } = createContext();
 
@@ -29,7 +29,7 @@ void test("ignores payloads without a system field", () => {
   assert.deepEqual(notifications, []);
 });
 
-void test("ignores providers without a configured replacement file", () => {
+test("ignores providers without a configured replacement file", () => {
   withFiles(
     {
       providers: {
@@ -54,7 +54,7 @@ void test("ignores providers without a configured replacement file", () => {
   );
 });
 
-void test("applies ordered replacements from the provider file", () => {
+test("applies ordered replacements from the provider file", () => {
   withProviderReplacements(
     [
       { target: "alpha", replacement: "beta" },
@@ -76,7 +76,7 @@ void test("applies ordered replacements from the provider file", () => {
   );
 });
 
-void test("uses an exact model file instead of the provider file", () => {
+test("uses an exact model file instead of the provider file", () => {
   withFiles(
     {
       providers: {
@@ -103,7 +103,7 @@ void test("uses an exact model file instead of the provider file", () => {
   );
 });
 
-void test("falls back to the provider file when the model is not configured", () => {
+test("falls back to the provider file when the model is not configured", () => {
   withFiles(
     {
       providers: {
@@ -130,7 +130,7 @@ void test("falls back to the provider file when the model is not configured", ()
   );
 });
 
-void test("supports providers configured only for specific models", () => {
+test("supports providers configured only for specific models", () => {
   withFiles(
     {
       providers: {
@@ -158,7 +158,7 @@ void test("supports providers configured only for specific models", () => {
   );
 });
 
-void test("patches text blocks without mutating the provider payload", () => {
+test("patches text blocks without mutating the provider payload", () => {
   withProviderReplacements([{ target: "old", replacement: "new" }], () => {
     const handler = registerExtension();
     const { ctx } = createContext();
@@ -180,7 +180,7 @@ void test("patches text blocks without mutating the provider payload", () => {
   });
 });
 
-void test("loads the representative cult replacement fixture", () => {
+test("loads the representative cult replacement fixture", () => {
   const fixtureText = readFileSync(CULT_FIXTURE_URL, "utf8");
   const replacements = parseReplacements(fixtureText);
   const original = replacements.map(({ target }) => target).join("\n");
@@ -211,7 +211,7 @@ void test("loads the representative cult replacement fixture", () => {
   );
 });
 
-void test("aborts the turn and leaves the payload unchanged when a target is missing", (t) => {
+test("aborts the turn and leaves the payload unchanged when a target is missing", (t) => {
   withProviderReplacements(
     [
       { target: "present", replacement: "patched" },
@@ -237,7 +237,7 @@ void test("aborts the turn and leaves the payload unchanged when a target is mis
   );
 });
 
-void test("reports invalid settings and sends the original request", (t) => {
+test("reports invalid settings and sends the original request", (t) => {
   withFiles({ providers: [] }, {}, () => {
     t.mock.method(console, "error", () => {});
     const handler = registerExtension();
@@ -251,7 +251,7 @@ void test("reports invalid settings and sends the original request", (t) => {
   });
 });
 
-void test("reports an invalid replacement file and sends the original request", (t) => {
+test("reports an invalid replacement file and sends the original request", (t) => {
   withFiles(
     {
       providers: {
