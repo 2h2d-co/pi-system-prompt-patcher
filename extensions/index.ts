@@ -1,10 +1,39 @@
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 const EXTENSION_ID = "pi-system-prompt-patcher";
 const SETTINGS_FILE = `${EXTENSION_ID}.json`;
+
+export type JsonPrimitive = boolean | null | number | string;
+
+export type JsonValue = JsonObject | JsonPrimitive | JsonValue[];
+
+export type JsonObject = {
+  [key: string]: JsonValue;
+};
+
+export type PromptPatcherContext = {
+  model: { provider: string; id: string } | undefined;
+  hasUI: boolean;
+  abort(): void;
+  ui: {
+    notify(message: string, level: "error"): void;
+  };
+};
+
+export type BeforeProviderRequestHandler = (
+  event: { payload: unknown },
+  ctx: PromptPatcherContext,
+) => JsonObject | undefined;
+
+export type PromptPatcherApi = {
+  on(event: "before_provider_request", handler: BeforeProviderRequestHandler): void;
+};
+
+type ProviderPayload = JsonObject & {
+  system: JsonValue;
+};
 
 type Replacement = {
   target: string;
@@ -20,7 +49,7 @@ type Settings = {
   providers: Record<string, ProviderSettings>;
 };
 
-export default function systemPromptPatcher(pi: ExtensionAPI) {
+export default function systemPromptPatcher(pi: PromptPatcherApi) {
   pi.on("before_provider_request", (event, ctx) => {
     if (!ctx.model || !hasSystemField(event.payload)) {
       return;
@@ -48,36 +77,31 @@ export default function systemPromptPatcher(pi: ExtensionAPI) {
 }
 
 function patchSystemPrompt(
-  payload: unknown,
+  payload: ProviderPayload,
   replacements: Replacement[],
   replacementPath: string,
-  ctx: ExtensionContext,
-): Record<string, unknown> | undefined {
-  if (!isRecord(payload)) {
-    reportError(ctx, `${EXTENSION_ID}: provider payload was not an object.`);
-    return undefined;
-  }
-
+  ctx: PromptPatcherContext,
+): JsonObject | undefined {
   const system = payload["system"];
 
-  if (typeof system === "string") {
+  if (isString(system)) {
     const patched = applyReplacements(system, replacements, replacementPath, ctx);
     return patched === undefined ? undefined : { ...payload, system: patched };
   }
 
   if (Array.isArray(system)) {
-    let blocks = system.map((block) => (isRecord(block) ? { ...block } : block));
+    let blocks = system.map((block) => (isJsonObject(block) ? { ...block } : block));
 
     for (let index = 0; index < replacements.length; index++) {
       const { target, replacement } = replacements[index]!;
       let found = false;
 
       blocks = blocks.map((block) => {
-        if (!isRecord(block)) {
+        if (!isJsonObject(block)) {
           return block;
         }
         const text = block["text"];
-        if (typeof text !== "string") {
+        if (!isString(text)) {
           return block;
         }
         if (text.includes(target)) {
@@ -103,7 +127,7 @@ function applyReplacements(
   text: string,
   replacements: Replacement[],
   replacementPath: string,
-  ctx: ExtensionContext,
+  ctx: PromptPatcherContext,
 ): string | undefined {
   let patched = text;
 
@@ -121,7 +145,7 @@ function applyReplacements(
 }
 
 function reportMissingTarget(
-  ctx: ExtensionContext,
+  ctx: PromptPatcherContext,
   index: number,
   target: string,
   replacementPath: string,
@@ -139,7 +163,7 @@ function reportMissingTarget(
   ctx.abort();
 }
 
-function loadSettings(settingsPath: string, ctx: ExtensionContext): Settings | undefined {
+function loadSettings(settingsPath: string, ctx: PromptPatcherContext): Settings | undefined {
   let parsed: unknown;
 
   try {
@@ -149,7 +173,7 @@ function loadSettings(settingsPath: string, ctx: ExtensionContext): Settings | u
     return;
   }
 
-  if (!isRecord(parsed) || !isRecord(parsed["providers"])) {
+  if (!isJsonObject(parsed) || !isJsonObject(parsed["providers"])) {
     reportError(ctx, `${EXTENSION_ID}: ${settingsPath} must contain a providers object.`);
     return;
   }
@@ -162,14 +186,14 @@ function loadSettings(settingsPath: string, ctx: ExtensionContext): Settings | u
       return;
     }
 
-    if (!isRecord(value)) {
+    if (!isJsonObject(value)) {
       reportError(ctx, `${EXTENSION_ID}: provider ${JSON.stringify(provider)} must be an object.`);
       return;
     }
 
     let replacementFile: string | undefined;
     if (Object.hasOwn(value, "replacementFile")) {
-      if (typeof value["replacementFile"] !== "string" || value["replacementFile"].length === 0) {
+      if (!isString(value["replacementFile"]) || value["replacementFile"].length === 0) {
         reportError(
           ctx,
           `${EXTENSION_ID}: provider ${JSON.stringify(provider)} must have a non-empty string replacementFile.`,
@@ -181,7 +205,7 @@ function loadSettings(settingsPath: string, ctx: ExtensionContext): Settings | u
 
     const models: Record<string, string> = {};
     if (Object.hasOwn(value, "models")) {
-      if (!isRecord(value["models"])) {
+      if (!isJsonObject(value["models"])) {
         reportError(
           ctx,
           `${EXTENSION_ID}: provider ${JSON.stringify(provider)} models must be an object.`,
@@ -197,7 +221,7 @@ function loadSettings(settingsPath: string, ctx: ExtensionContext): Settings | u
           );
           return;
         }
-        if (typeof modelReplacementFile !== "string" || modelReplacementFile.length === 0) {
+        if (!isString(modelReplacementFile) || modelReplacementFile.length === 0) {
           reportError(
             ctx,
             `${EXTENSION_ID}: model ${JSON.stringify(model)} for provider ${JSON.stringify(provider)} must map to a non-empty replacement file path.`,
@@ -247,7 +271,7 @@ function resolveConfiguredPath(configuredPath: string, settingsPath: string): st
 
 function loadReplacements(
   replacementPath: string,
-  ctx: ExtensionContext,
+  ctx: PromptPatcherContext,
 ): Replacement[] | undefined {
   let parsed: unknown;
 
@@ -267,13 +291,13 @@ function loadReplacements(
 
   for (let index = 0; index < parsed.length; index++) {
     const item = parsed[index];
-    if (!isRecord(item)) {
+    if (!isJsonObject(item)) {
       reportError(ctx, `${EXTENSION_ID}: replacement ${index + 1} must be an object.`);
       return;
     }
 
     const { target, replacement } = item;
-    if (typeof target !== "string" || target.length === 0) {
+    if (!isString(target) || target.length === 0) {
       reportError(
         ctx,
         `${EXTENSION_ID}: replacement ${index + 1} must have a non-empty string target.`,
@@ -281,7 +305,7 @@ function loadReplacements(
       return;
     }
 
-    if (typeof replacement !== "string") {
+    if (!isString(replacement)) {
       reportError(ctx, `${EXTENSION_ID}: replacement ${index + 1} must have a string replacement.`);
       return;
     }
@@ -297,7 +321,7 @@ function resolveSettingsPath(): string {
   return join(agentDir, SETTINGS_FILE);
 }
 
-function reportError(ctx: ExtensionContext, message: string) {
+function reportError(ctx: PromptPatcherContext, message: string) {
   console.error(message);
   if (ctx.hasUI) {
     ctx.ui.notify(message, "error");
@@ -308,10 +332,27 @@ function formatError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
+function isString(value: unknown): value is string {
+  return typeof value === "string";
 }
 
-function hasSystemField(value: unknown): value is Record<string, unknown> {
-  return isRecord(value) && Object.hasOwn(value, "system");
+function isJsonValue(value: unknown): value is JsonValue {
+  if (
+    value === null ||
+    typeof value === "boolean" ||
+    typeof value === "number" ||
+    typeof value === "string"
+  ) {
+    return true;
+  }
+  if (Array.isArray(value)) return value.every(isJsonValue);
+  return typeof value === "object" && Object.values(value).every(isJsonValue);
+}
+
+function isJsonObject(value: unknown): value is JsonObject {
+  return typeof value === "object" && isJsonValue(value) && value !== null && !Array.isArray(value);
+}
+
+function hasSystemField(value: unknown): value is ProviderPayload {
+  return isJsonObject(value) && Object.hasOwn(value, "system");
 }

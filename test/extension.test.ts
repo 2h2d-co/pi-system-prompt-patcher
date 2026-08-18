@@ -3,21 +3,16 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import extension from "../extensions/index.ts";
+import extension, {
+  type BeforeProviderRequestHandler,
+  type JsonValue,
+  type PromptPatcherApi,
+  type PromptPatcherContext,
+} from "../extensions/index.ts";
 
 const SETTINGS_FILE = "pi-system-prompt-patcher.json";
 const CULT_FIXTURE_FILE = "cult-system-prompt-replacements.json";
 const CULT_FIXTURE_URL = new URL(`./fixtures/${CULT_FIXTURE_FILE}`, import.meta.url);
-
-type BeforeProviderRequestEvent = {
-  payload: unknown;
-};
-
-type BeforeProviderRequestHandler = (
-  event: BeforeProviderRequestEvent,
-  ctx: ExtensionContext,
-) => unknown;
 
 type Replacement = {
   target: string;
@@ -167,12 +162,9 @@ void test("patches text blocks without mutating the provider payload", () => {
   withProviderReplacements([{ target: "old", replacement: "new" }], () => {
     const handler = registerExtension();
     const { ctx } = createContext();
+    const textBlock = { type: "text", text: "old value", cache_control: { type: "ephemeral" } };
     const payload = {
-      system: [
-        { type: "text", text: "old value", cache_control: { type: "ephemeral" } },
-        { type: "image", source: "preserved" },
-        "preserved",
-      ],
+      system: [textBlock, { type: "image", source: "preserved" }, "preserved"],
     };
 
     const result = handler({ payload }, ctx);
@@ -184,13 +176,13 @@ void test("patches text blocks without mutating the provider payload", () => {
         "preserved",
       ],
     });
-    assert.equal((payload.system[0] as { text: string }).text, "old value");
+    assert.equal(textBlock.text, "old value");
   });
 });
 
 void test("loads the representative cult replacement fixture", () => {
   const fixtureText = readFileSync(CULT_FIXTURE_URL, "utf8");
-  const replacements = JSON.parse(fixtureText) as Replacement[];
+  const replacements = parseReplacements(fixtureText);
   const original = replacements.map(({ target }) => target).join("\n");
   const expected = replacements.reduce(
     (text, { target, replacement }) => text.replaceAll(target, replacement),
@@ -289,13 +281,11 @@ void test("reports an invalid replacement file and sends the original request", 
 
 function registerExtension(): BeforeProviderRequestHandler {
   let handler: BeforeProviderRequestHandler | undefined;
-  const pi = {
-    on(event: string, candidate: BeforeProviderRequestHandler) {
-      if (event === "before_provider_request") {
-        handler = candidate;
-      }
+  const pi: PromptPatcherApi = {
+    on(_event, candidate) {
+      handler = candidate;
     },
-  } as unknown as ExtensionAPI;
+  };
 
   extension(pi);
 
@@ -306,7 +296,7 @@ function registerExtension(): BeforeProviderRequestHandler {
 function createContext(model = { provider: "cult", id: "ritual-1" }) {
   const aborts = { count: 0 };
   const notifications: string[] = [];
-  const ctx = {
+  const ctx: PromptPatcherContext = {
     hasUI: true,
     model,
     abort() {
@@ -317,7 +307,7 @@ function createContext(model = { provider: "cult", id: "ritual-1" }) {
         notifications.push(message);
       },
     },
-  } as unknown as ExtensionContext;
+  };
 
   return { ctx, aborts, notifications };
 }
@@ -338,7 +328,11 @@ function withProviderReplacements(replacements: Replacement[], run: () => void) 
   );
 }
 
-function withFiles(settings: unknown, replacementFiles: Record<string, unknown>, run: () => void) {
+function withFiles(
+  settings: JsonValue,
+  replacementFiles: Record<string, JsonValue>,
+  run: () => void,
+) {
   const directory = mkdtempSync(join(tmpdir(), "pi-system-prompt-patcher-"));
   const previousAgentDir = process.env["PI_CODING_AGENT_DIR"];
 
@@ -348,7 +342,7 @@ function withFiles(settings: unknown, replacementFiles: Record<string, unknown>,
     for (const [file, contents] of Object.entries(replacementFiles)) {
       writeFileSync(
         join(directory, file),
-        typeof contents === "string" ? contents : JSON.stringify(contents),
+        isString(contents) ? contents : JSON.stringify(contents),
         "utf8",
       );
     }
@@ -361,4 +355,27 @@ function withFiles(settings: unknown, replacementFiles: Record<string, unknown>,
     }
     rmSync(directory, { recursive: true, force: true });
   }
+}
+
+function parseReplacements(value: string): Replacement[] {
+  const parsed: unknown = JSON.parse(value);
+  if (!Array.isArray(parsed) || !parsed.every(isReplacement)) {
+    throw new Error("Expected a replacement array.");
+  }
+  return parsed;
+}
+
+function isReplacement(value: unknown): value is Replacement {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "target" in value &&
+    "replacement" in value &&
+    typeof value.target === "string" &&
+    typeof value.replacement === "string"
+  );
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === "string";
 }
