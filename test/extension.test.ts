@@ -229,9 +229,9 @@ void test("aborts the turn and leaves the payload unchanged when a target is mis
       assert.equal(result, undefined);
       assert.deepEqual(payload, { system: "present" });
       assert.equal(aborts.count, 1);
-      assert.equal(notifications.length, 1);
-      assert.match(notifications[0]!, /replacement 2 target was not found/);
-      assert.match(notifications[0]!, /Missing target: "missing"/);
+      const notification = getOnlyNotification(notifications);
+      assert.match(notification, /replacement 2 target was not found/);
+      assert.match(notification, /Missing target: "missing"/);
       assert.deepEqual(errors, notifications);
     },
   );
@@ -247,8 +247,7 @@ void test("reports invalid settings and sends the original request", (t) => {
 
     assert.equal(result, undefined);
     assert.equal(aborts.count, 0);
-    assert.equal(notifications.length, 1);
-    assert.match(notifications[0]!, /must contain a providers object/);
+    assert.match(getOnlyNotification(notifications), /must contain a providers object/);
   });
 });
 
@@ -273,8 +272,7 @@ void test("reports an invalid replacement file and sends the original request", 
 
       assert.equal(result, undefined);
       assert.equal(aborts.count, 0);
-      assert.equal(notifications.length, 1);
-      assert.match(notifications[0]!, /must contain an array/);
+      assert.match(getOnlyNotification(notifications), /must contain an array/);
     },
   );
 });
@@ -291,6 +289,13 @@ function registerExtension(): BeforeProviderRequestHandler {
 
   assert.ok(handler);
   return handler;
+}
+
+function getOnlyNotification(notifications: string[]): string {
+  assert.equal(notifications.length, 1);
+  const notification = notifications[0];
+  assert.ok(notification);
+  return notification;
 }
 
 function createContext(model = { provider: "cult", id: "ritual-1" }) {

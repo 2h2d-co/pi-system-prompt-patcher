@@ -92,8 +92,7 @@ function patchSystemPrompt(
   if (Array.isArray(system)) {
     let blocks = system.map((block) => (isJsonObject(block) ? { ...block } : block));
 
-    for (let index = 0; index < replacements.length; index++) {
-      const { target, replacement } = replacements[index]!;
+    for (const [index, { target, replacement }] of replacements.entries()) {
       let found = false;
 
       blocks = blocks.map((block) => {
@@ -131,8 +130,7 @@ function applyReplacements(
 ): string | undefined {
   let patched = text;
 
-  for (let index = 0; index < replacements.length; index++) {
-    const { target, replacement } = replacements[index]!;
+  for (const [index, { target, replacement }] of replacements.entries()) {
     if (!patched.includes(target)) {
       reportMissingTarget(ctx, index, target, replacementPath);
       return;
@@ -169,6 +167,9 @@ function loadSettings(settingsPath: string, ctx: PromptPatcherContext): Settings
   try {
     parsed = JSON.parse(readFileSync(settingsPath, "utf8"));
   } catch (error) {
+    if (!(error instanceof Error)) {
+      throw error;
+    }
     reportError(ctx, `${EXTENSION_ID}: failed to read ${settingsPath}: ${formatError(error)}`);
     return;
   }
@@ -278,6 +279,9 @@ function loadReplacements(
   try {
     parsed = JSON.parse(readFileSync(replacementPath, "utf8"));
   } catch (error) {
+    if (!(error instanceof Error)) {
+      throw error;
+    }
     reportError(ctx, `${EXTENSION_ID}: failed to read ${replacementPath}: ${formatError(error)}`);
     return;
   }
@@ -287,10 +291,10 @@ function loadReplacements(
     return;
   }
 
+  const replacementItems: unknown[] = parsed;
   const replacements: Replacement[] = [];
 
-  for (let index = 0; index < parsed.length; index++) {
-    const item = parsed[index];
+  for (const [index, item] of replacementItems.entries()) {
     if (!isJsonObject(item)) {
       reportError(ctx, `${EXTENSION_ID}: replacement ${index + 1} must be an object.`);
       return;
