@@ -16,9 +16,9 @@ export type JsonObject = {
 export type PromptPatcherContext = {
   model: { provider: string; id: string } | undefined;
   hasUI: boolean;
-  abort(): void;
+  abort: () => void;
   ui: {
-    notify(message: string, level: "error"): void;
+    notify: (message: string, level: "error") => void;
   };
 };
 
@@ -28,7 +28,7 @@ export type BeforeProviderRequestHandler = (
 ) => JsonObject | undefined;
 
 export type PromptPatcherApi = {
-  on(event: "before_provider_request", handler: BeforeProviderRequestHandler): void;
+  on: (event: "before_provider_request", handler: BeforeProviderRequestHandler) => void;
 };
 
 type ProviderPayload = JsonObject & {
