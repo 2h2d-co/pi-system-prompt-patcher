@@ -19,11 +19,19 @@ type Replacement = {
   replacement: string;
 };
 
-test("ignores payloads without a system field", () => {
+test("ignores payloads without system instructions", () => {
   const handler = registerExtension();
   const { ctx, notifications } = createContext();
 
-  const result = handler({ payload: { instructions: "unchanged" } }, ctx);
+  const result = handler(
+    {
+      payload: {
+        instructions: "unchanged",
+        messages: [{ role: "user", content: "unchanged" }],
+      },
+    },
+    ctx,
+  );
 
   assert.equal(result, undefined);
   assert.deepEqual(notifications, []);
@@ -178,6 +186,165 @@ test("patches text blocks without mutating the provider payload", () => {
     });
     assert.equal(textBlock.text, "old value");
   });
+});
+
+test("patches every system instruction without changing conversation or tool blocks", () => {
+  withProviderReplacements([{ target: "old", replacement: "new" }], () => {
+    const handler = registerExtension();
+    const { ctx, aborts, notifications } = createContext();
+    const toolAddition = {
+      type: "tool_addition",
+      tool: { type: "tool_reference", name: "old" },
+    };
+    const toolRemoval = {
+      type: "tool_removal",
+      tool: { type: "tool_reference", name: "old" },
+    };
+    const payload = {
+      system: [{ type: "text", text: "old base" }],
+      messages: [
+        { role: "user", content: "old user" },
+        { role: "assistant", content: [{ type: "text", text: "old response" }] },
+        { role: "system", content: "old update old" },
+        {
+          role: "system",
+          content: [
+            { type: "text", text: "old section", cache_control: { type: "ephemeral" } },
+            toolAddition,
+            toolRemoval,
+            { type: "other", text: "old metadata" },
+          ],
+        },
+      ],
+    };
+    const original = structuredClone(payload);
+
+    const result = handler({ payload }, ctx);
+
+    assert.deepEqual(result, {
+      system: [{ type: "text", text: "new base" }],
+      messages: [
+        original.messages[0],
+        original.messages[1],
+        { role: "system", content: "new update new" },
+        {
+          role: "system",
+          content: [
+            { type: "text", text: "new section", cache_control: { type: "ephemeral" } },
+            toolAddition,
+            toolRemoval,
+            { type: "other", text: "old metadata" },
+          ],
+        },
+      ],
+    });
+    assert.deepEqual(payload, original);
+    assert.equal(aborts.count, 0);
+    assert.deepEqual(notifications, []);
+  });
+});
+
+test("applies ordered replacements across separate system instruction fragments", () => {
+  withProviderReplacements(
+    [
+      { target: "alpha", replacement: "beta" },
+      { target: "beta", replacement: "gamma" },
+      { target: "later", replacement: "updated" },
+    ],
+    () => {
+      const handler = registerExtension();
+      const { ctx } = createContext();
+      const payload = {
+        system: "alpha",
+        messages: [
+          { role: "system", content: [{ type: "text", text: "beta later" }] },
+          { role: "user", content: "alpha beta later" },
+        ],
+      };
+
+      assert.deepEqual(handler({ payload }, ctx), {
+        system: "gamma",
+        messages: [
+          { role: "system", content: [{ type: "text", text: "gamma updated" }] },
+          { role: "user", content: "alpha beta later" },
+        ],
+      });
+    },
+  );
+});
+
+test("patches system messages when the top-level system field is absent", () => {
+  withProviderReplacements([{ target: "old", replacement: "new" }], () => {
+    const handler = registerExtension();
+    const { ctx } = createContext();
+    const payload = {
+      messages: [
+        { role: "system", content: "old" },
+        { role: "system", content: [{ type: "text", text: "old" }] },
+      ],
+    };
+
+    assert.deepEqual(handler({ payload }, ctx), {
+      messages: [
+        { role: "system", content: "new" },
+        { role: "system", content: [{ type: "text", text: "new" }] },
+      ],
+    });
+    assert.equal(Object.hasOwn(payload, "system"), false);
+  });
+});
+
+test("does not accept target matches in conversation or tool metadata", (t) => {
+  t.mock.method(console, "error", () => {});
+  withProviderReplacements([{ target: "missing", replacement: "new" }], () => {
+    const handler = registerExtension();
+    const { ctx, aborts, notifications } = createContext();
+    const payload = {
+      system: "base",
+      messages: [
+        { role: "user", content: "missing" },
+        { role: "assistant", content: [{ type: "text", text: "missing" }] },
+        {
+          role: "system",
+          content: [
+            { type: "tool_addition", tool: { type: "tool_reference", name: "missing" } },
+            { type: "other", text: "missing" },
+          ],
+        },
+      ],
+    };
+
+    assert.equal(handler({ payload }, ctx), undefined);
+    assert.equal(aborts.count, 1);
+    assert.match(getOnlyNotification(notifications), /replacement 1 target was not found/);
+  });
+});
+
+test("discards patches to all system fragments when a later target is absent", (t) => {
+  t.mock.method(console, "error", () => {});
+  withProviderReplacements(
+    [
+      { target: "present", replacement: "patched" },
+      { target: "missing", replacement: "unused" },
+    ],
+    () => {
+      const handler = registerExtension();
+      const { ctx, aborts, notifications } = createContext();
+      const payload = {
+        system: "present",
+        messages: [
+          { role: "system", content: "present" },
+          { role: "system", content: [{ type: "text", text: "present" }] },
+        ],
+      };
+      const original = structuredClone(payload);
+
+      assert.equal(handler({ payload }, ctx), undefined);
+      assert.deepEqual(payload, original);
+      assert.equal(aborts.count, 1);
+      assert.match(getOnlyNotification(notifications), /replacement 2 target was not found/);
+    },
+  );
 });
 
 test("loads the representative cult replacement fixture", () => {

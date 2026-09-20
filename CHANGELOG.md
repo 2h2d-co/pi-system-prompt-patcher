@@ -2,8 +2,14 @@
 
 ## Unreleased
 
+### Fixed
+
+- Patch Pi 0.86's mid-conversation system instructions as well as the leading system prompt.
+- Match each replacement across all system instruction fragments while preserving ordered, atomic replacement and leaving conversation text and tool metadata unchanged.
+
 ### Changed
 
+- Require Pi 0.86.x and update the development dependency and lockfile to Pi 0.86.0.
 - Adopt the shared 2h2d Oxlint policy, including the blanket ban on non-const type assertions.
 
 ### Security

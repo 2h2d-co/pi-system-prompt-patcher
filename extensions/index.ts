@@ -31,10 +31,6 @@ export type PromptPatcherApi = {
   on: (event: "before_provider_request", handler: BeforeProviderRequestHandler) => void;
 };
 
-type ProviderPayload = JsonObject & {
-  system: JsonValue;
-};
-
 type Replacement = {
   target: string;
   replacement: string;
@@ -51,7 +47,7 @@ type Settings = {
 
 export default function systemPromptPatcher(pi: PromptPatcherApi) {
   pi.on("before_provider_request", (event, ctx) => {
-    if (!ctx.model || !hasSystemField(event.payload)) {
+    if (!ctx.model || !hasSystemInstructions(event.payload)) {
       return;
     }
 
@@ -77,69 +73,63 @@ export default function systemPromptPatcher(pi: PromptPatcherApi) {
 }
 
 function patchSystemPrompt(
-  payload: ProviderPayload,
+  payload: JsonObject,
   replacements: Replacement[],
   replacementPath: string,
   ctx: PromptPatcherContext,
 ): JsonObject | undefined {
   const system = payload["system"];
 
-  if (isString(system)) {
-    const patched = applyReplacements(system, replacements, replacementPath, ctx);
-    return patched === undefined ? undefined : { ...payload, system: patched };
+  if (Object.hasOwn(payload, "system") && !isString(system) && !Array.isArray(system)) {
+    reportError(
+      ctx,
+      `${EXTENSION_ID}: provider payload did not contain a supported system prompt.`,
+    );
+    return undefined;
   }
 
-  if (Array.isArray(system)) {
-    let blocks = system.map((block) => (isJsonObject(block) ? { ...block } : block));
-
-    for (const [index, { target, replacement }] of replacements.entries()) {
-      let found = false;
-
-      blocks = blocks.map((block) => {
-        if (!isJsonObject(block)) {
-          return block;
-        }
-        const text = block["text"];
-        if (!isString(text)) {
-          return block;
-        }
-        if (text.includes(target)) {
-          found = true;
-        }
-        return { ...block, text: text.replaceAll(target, replacement) };
-      });
-
-      if (!found) {
-        reportMissingTarget(ctx, index, target, replacementPath);
-        return undefined;
-      }
-    }
-
-    return { ...payload, system: blocks };
-  }
-
-  reportError(ctx, `${EXTENSION_ID}: provider payload did not contain a supported system prompt.`);
-  return undefined;
-}
-
-function applyReplacements(
-  text: string,
-  replacements: Replacement[],
-  replacementPath: string,
-  ctx: PromptPatcherContext,
-): string | undefined {
-  let patched = text;
+  let patched = payload;
 
   for (const [index, { target, replacement }] of replacements.entries()) {
-    if (!patched.includes(target)) {
-      reportMissingTarget(ctx, index, target, replacementPath);
-      return;
-    }
+    let found = false;
+    patched = mapSystemPromptText(patched, (text) => {
+      if (text.includes(target)) found = true;
+      return text.replaceAll(target, replacement);
+    });
 
-    patched = patched.replaceAll(target, replacement);
+    if (!found) {
+      reportMissingTarget(ctx, index, target, replacementPath);
+      return undefined;
+    }
   }
 
   return patched;
+}
+
+function mapSystemPromptText(payload: JsonObject, transform: (text: string) => string): JsonObject {
+  const patched = { ...payload };
+  const system = payload["system"];
+  if (system !== undefined) patched["system"] = mapPromptContent(system, transform);
+
+  const messages = payload["messages"];
+  if (Array.isArray(messages)) {
+    patched["messages"] = messages.map((message) => {
+      if (!isJsonObject(message) || message["role"] !== "system") return message;
+      const content = message["content"];
+      if (content === undefined) return message;
+      return { ...message, content: mapPromptContent(content, transform) };
+    });
+  }
+  return patched;
+}
+
+function mapPromptContent(content: JsonValue, transform: (text: string) => string): JsonValue {
+  if (isString(content)) return transform(content);
+  if (!Array.isArray(content)) return content;
+  return content.map((block) => {
+    if (!isJsonObject(block) || block["type"] !== "text" || !isString(block["text"])) return block;
+    return { ...block, text: transform(block["text"]) };
+  });
 }
 
 function reportMissingTarget(
@@ -357,6 +347,12 @@ function isJsonObject(value: unknown): value is JsonObject {
   return typeof value === "object" && isJsonValue(value) && value !== null && !Array.isArray(value);
 }
 
-function hasSystemField(value: unknown): value is ProviderPayload {
-  return isJsonObject(value) && Object.hasOwn(value, "system");
+function hasSystemInstructions(value: unknown): value is JsonObject {
+  if (!isJsonObject(value)) return false;
+  if (Object.hasOwn(value, "system")) return true;
+  const messages = value["messages"];
+  return (
+    Array.isArray(messages) &&
+    messages.some((message) => isJsonObject(message) && message["role"] === "system")
+  );
 }

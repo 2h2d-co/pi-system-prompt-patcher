@@ -2,9 +2,11 @@
 
 Patch provider system prompts with exact, provider-aware, config-driven replacements.
 
-The extension rewrites the `system` field in compatible provider requests immediately before Pi
-sends them. It supports string prompts and arrays of text content blocks, and ignores request
-payloads without a `system` field.
+The extension rewrites the top-level `system` field and `role: "system"` entries in `messages`
+immediately before Pi sends a compatible provider request. It supports string prompts and arrays
+of text content blocks. It ignores payloads without either form of system instructions.
+
+Requires Pi `>=0.86.0 <0.87.0`.
 
 ## Install
 
@@ -64,14 +66,19 @@ Each replacement file contains an array:
 Replacements are:
 
 - applied in array order;
-- applied to every occurrence of each target;
+- applied to every occurrence of each target across all system instruction fragments;
 - selected by provider and, when configured, model;
 - loaded again with the settings for every provider request, so changes do not require `/reload`;
 - applied atomically—the provider payload is not mutated.
 
-If a target is absent, the extension leaves the request unchanged, reports the missing target,
-and aborts the current agent turn. Invalid or unreadable settings and replacement files are
-reported and the request continues unchanged.
+Each target must occur in at least one system instruction fragment, not in every fragment.
+Targets do not match across fragment boundaries. User and assistant messages, tool declarations,
+and non-text content blocks remain unchanged. The extension does not patch OpenAI `instructions`
+or developer messages.
+
+If a target is absent from all system instructions, the extension discards every patch, reports
+the missing target, and aborts the current agent turn. Invalid or unreadable settings and replacement
+files are reported and the request continues unchanged.
 
 ## Development
 
