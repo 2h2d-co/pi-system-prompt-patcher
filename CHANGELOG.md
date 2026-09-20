@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [0.0.3] - 2026-09-20
+
 ### Fixed
 
 - Patch Pi 0.86's mid-conversation system instructions as well as the leading system prompt.
@@ -16,7 +18,7 @@
 
 - Require npm releases to match a locally built SHA-256 recorded in an SSH-signed release commit before trusted publishing can stage the package.
 - Require code-owner review for release policy, protect `main` and `v*` refs, and gate npm OIDC behind a reviewed tag-only environment.
-- Updated the Pi development dependency and peer range to 0.84.x, including patched transitive HTTP and glob dependencies.
+- Update transitive HTTP and glob dependencies to patched versions.
 
 ## [0.0.2] - 2026-08-07
 
