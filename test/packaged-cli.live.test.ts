@@ -10,7 +10,7 @@ import { RpcClient } from "../node_modules/@earendil-works/pi-coding-agent/dist/
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 test(
-  "published Patcher works through the Pi 0.86 CLI and live Anthropic",
+  "published Patcher works through the Pi 0.87 CLI and live Anthropic",
   {
     skip: process.env["PI_PATCHER_LIVE_TEST"] !== "1",
     timeout: 240_000,
@@ -61,7 +61,7 @@ test(
         env: { ...process.env, ...env },
         encoding: "utf8",
       }).trim(),
-      "0.86.0",
+      "0.87.0",
     );
     await mkdir(env.PI_CODING_AGENT_DIR);
     await writeFile(
@@ -160,7 +160,7 @@ test(
     await turn("PATCH_SECOND");
     await client.stop();
     t.diagnostic(
-      "Pi 0.86.0: packed extension, real Anthropic payloads, config reload, prompt reload, and resume passed",
+      "Pi 0.87.0: packed extension, real Anthropic payloads, config reload, prompt reload, and resume passed",
     );
   },
 );
