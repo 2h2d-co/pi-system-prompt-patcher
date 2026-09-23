@@ -21,11 +21,16 @@ _.path = ["{{config_root}}/node_modules/.bin"]
 
 [tasks.check]
 description = "Run all non-writing quality checks and tests"
+# In-process SDK tests read Pi's package metadata from PI_PACKAGE_DIR. Bind it to the
+# repository's Pi dependency so an inherited value cannot describe another runtime.
+env = { PI_PACKAGE_DIR = "{{config_root}}/node_modules/@earendil-works/pi-coding-agent" }
 run = ["npm run check", "npm test"]
 
 [tasks."test:live"]
-description = "Verify the packaged extension through Pi 0.86.0 and live Anthropic"
+description = "Verify the packaged extension through Pi 0.87.0 and live Anthropic"
 run = '''
+# Bind the token lookup and the test process to the repository's Pi dependency. The CLI
+# subprocess binds PI_PACKAGE_DIR to the selected executable itself.
 export PI_PACKAGE_DIR="$PWD/node_modules/@earendil-works/pi-coding-agent"
 PI_PATCHER_LIVE_API_KEY="$(./node_modules/.bin/pi auth print-bearer-token --provider anthropic --model claude-sonnet-5)" \
   npm run test:live

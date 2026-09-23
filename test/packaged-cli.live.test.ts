@@ -6,11 +6,32 @@ import { dirname, join, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { RpcClient } from "../node_modules/@earendil-works/pi-coding-agent/dist/modes/rpc/rpc-client.js";
+import { archiveEntries, packageArchive } from "./package-archive.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const piVersion = "0.87.0";
+
+function systemPrompt(revision: number): string {
+  return `Reply with exactly ORIGINAL_MARKER and no other text. Prompt revision: PROMPT_REVISION_${revision}.`;
+}
+
+async function assistantTexts(client: RpcClient): Promise<string[]> {
+  const texts: string[] = [];
+  for (const message of await client.getMessages()) {
+    if (message.role !== "assistant") continue;
+    assert.equal(message.errorMessage, undefined);
+    texts.push(
+      message.content
+        .map((block) => (block.type === "text" ? block.text : ""))
+        .join("")
+        .trim(),
+    );
+  }
+  return texts;
+}
 
 test(
-  "published Patcher works through the Pi 0.87 CLI and live Anthropic",
+  `packaged Patcher works through the Pi ${piVersion} CLI and live Anthropic`,
   {
     skip: process.env["PI_PATCHER_LIVE_TEST"] !== "1",
     timeout: 240_000,
@@ -20,22 +41,8 @@ test(
     assert.ok(token, "PI_PATCHER_LIVE_API_KEY is required");
     const temporary = await mkdtemp(join(tmpdir(), "patcher-cli-live-"));
     t.after(() => rm(temporary, { recursive: true, force: true }));
-    let archive = process.env["PI_PACKAGE_ARCHIVE"];
-    if (!archive) {
-      execFileSync(
-        "npm",
-        ["pack", "--ignore-scripts", "--allow-directory=all", "--pack-destination", temporary],
-        { cwd: root, stdio: "pipe" },
-      );
-      const manifest: unknown = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
-      assert.ok(manifest && typeof manifest === "object" && "version" in manifest);
-      assert.ok(typeof manifest.version === "string");
-      archive = join(temporary, `pi-system-prompt-patcher-${manifest.version}.tgz`);
-    }
-    const files = execFileSync("tar", ["-tzf", archive], { encoding: "utf8" })
-      .trim()
-      .split("\n")
-      .sort();
+    const archive = await packageArchive(root, temporary, process.env["PI_PACKAGE_ARCHIVE"]);
+    const files = archiveEntries(archive);
     const expected = (await readFile(join(root, ".github/npm-package-files"), "utf8"))
       .trim()
       .split("\n")
@@ -47,6 +54,8 @@ test(
       process.env["PI_TEST_CLI_PATH"] ??
         join(root, "node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js"),
     );
+    // Bind the CLI's package metadata to the selected executable so an inherited
+    // PI_PACKAGE_DIR cannot describe a different runtime.
     const piRoot = resolve(dirname(cli), "../..");
     const env = {
       HOME: temporary,
@@ -61,7 +70,7 @@ test(
         env: { ...process.env, ...env },
         encoding: "utf8",
       }).trim(),
-      "0.87.0",
+      piVersion,
     );
     await mkdir(env.PI_CODING_AGENT_DIR);
     await writeFile(
@@ -77,10 +86,8 @@ test(
         compaction: { enabled: false },
       }),
     );
-    await writeFile(
-      join(env.PI_CODING_AGENT_DIR, "SYSTEM.md"),
-      "Reply with exactly ORIGINAL_MARKER and no other text.",
-    );
+    const promptFile = join(env.PI_CODING_AGENT_DIR, "SYSTEM.md");
+    await writeFile(promptFile, systemPrompt(1));
     await writeFile(
       join(env.PI_CODING_AGENT_DIR, "pi-system-prompt-patcher.json"),
       JSON.stringify({
@@ -92,6 +99,7 @@ test(
       replacements,
       JSON.stringify([{ target: "ORIGINAL_MARKER", replacement: "PATCH_FIRST" }]),
     );
+    const sessionFile = join(temporary, "session.jsonl");
     const options = {
       cliPath: cli,
       cwd: temporary,
@@ -107,7 +115,7 @@ test(
         "--thinking",
         "low",
         "--session",
-        join(temporary, "session.jsonl"),
+        sessionFile,
         "-e",
         join(temporary, "package"),
         "-e",
@@ -117,7 +125,7 @@ test(
     let client = new RpcClient(options);
     t.after(async () => client.stop());
     await client.start();
-    async function turn(expectedMarker: string): Promise<void> {
+    async function turn(expectedMarker: string, expectedRevision: number): Promise<void> {
       const events = await client.promptAndWait(
         "Return the marker required by your system instructions.",
         undefined,
@@ -127,40 +135,48 @@ test(
         events.filter((event: { type: string }) => event.type === "extension_error"),
         [],
       );
-      const assistants = (await client.getMessages()).filter(
-        (message) => message.role === "assistant",
-      );
-      const assistant = assistants.at(-1);
-      assert.ok(assistant);
-      assert.equal(assistant.errorMessage, undefined);
       assert.equal(await client.getLastAssistantText(), expectedMarker);
       const observations = (await client.getEntries()).entries.filter(
         (entry) => entry.type === "custom" && entry.customType === "release-test-system",
       );
       const latest = observations.at(-1);
       assert.ok(latest?.type === "custom");
-      assert.deepEqual(latest.data, { marker: expectedMarker });
+      assert.deepEqual(latest.data, { marker: expectedMarker, revision: expectedRevision });
       assert.doesNotMatch(client.getStderr(), /Failed to load extension|not a function/);
     }
-    await turn("PATCH_FIRST");
+    await turn("PATCH_FIRST", 1);
     await writeFile(
       replacements,
       JSON.stringify([{ target: "ORIGINAL_MARKER", replacement: "PATCH_SECOND" }]),
     );
-    await turn("PATCH_SECOND");
-    await writeFile(
-      join(env.PI_CODING_AGENT_DIR, "SYSTEM.md"),
-      "Current instruction: reply with exactly ORIGINAL_MARKER and no other text.",
-    );
+    await turn("PATCH_SECOND", 1);
+    // A reload must deliver the rewritten SYSTEM.md to the provider, not only re-run the
+    // patcher against the previous prompt.
+    await writeFile(promptFile, systemPrompt(2));
     await client.prompt("/release-test-reload");
-    await turn("PATCH_SECOND");
+    await turn("PATCH_SECOND", 2);
+    const before = await client.getState();
+    assert.ok(before.sessionFile);
+    assert.equal(await realpath(before.sessionFile), await realpath(sessionFile));
+    const history = await assistantTexts(client);
+    assert.deepEqual(history, ["PATCH_FIRST", "PATCH_SECOND", "PATCH_SECOND"]);
+    const entriesBefore = (await client.getEntries()).entries.map((entry) => entry.id);
+    assert.ok(entriesBefore.length > 0);
     await client.stop();
+    // A restart must resume the persisted session rather than start a fresh one.
     client = new RpcClient(options);
     await client.start();
-    await turn("PATCH_SECOND");
+    const after = await client.getState();
+    assert.equal(after.sessionId, before.sessionId);
+    assert.equal(after.sessionFile, before.sessionFile);
+    assert.deepEqual(await assistantTexts(client), history);
+    const entriesAfter = new Set((await client.getEntries()).entries.map((entry) => entry.id));
+    assert.ok(entriesBefore.every((id) => entriesAfter.has(id)));
+    await turn("PATCH_SECOND", 2);
+    assert.deepEqual(await assistantTexts(client), [...history, "PATCH_SECOND"]);
     await client.stop();
     t.diagnostic(
-      "Pi 0.87.0: packed extension, real Anthropic payloads, config reload, prompt reload, and resume passed",
+      `Pi ${piVersion}: packed extension, real Anthropic payloads, config reload, prompt reload, and resume passed`,
     );
   },
 );

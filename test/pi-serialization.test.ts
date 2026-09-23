@@ -12,7 +12,7 @@ import extension, {
 } from "../extensions/index.ts";
 
 for (const supportsMidConvoSystemMessages of [false, true]) {
-  test(`patches Pi 0.86 Anthropic serialization with mid-conversation support ${supportsMidConvoSystemMessages}`, async (t) => {
+  test(`patches Pi Anthropic serialization with mid-conversation support ${supportsMidConvoSystemMessages}`, async (t) => {
     const directory = mkdtempSync(join(tmpdir(), "pi-prompt-patcher-serialization-"));
     const previousAgentDir = process.env["PI_CODING_AGENT_DIR"];
     process.env["PI_CODING_AGENT_DIR"] = directory;
