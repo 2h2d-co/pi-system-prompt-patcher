@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## [0.0.5] - 2026-09-23
+
+### Changed
+
+- Clarify Pi runtime selection and configuration isolation in the packaged documentation.
+  System prompt replacement behavior is unchanged.
+
 ## [0.0.4] - 2026-09-22
 
 ### Changed
