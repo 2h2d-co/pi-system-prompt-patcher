@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [0.0.7] - 2026-09-30
+
 ### Changed
 
 - Require Pi 0.99.1 or newer. The extension refuses to load on an older Pi.
