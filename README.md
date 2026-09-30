@@ -8,6 +8,11 @@ of text content blocks. It ignores payloads without either form of system instru
 
 Requires Pi `>=0.99.1 <0.100.0`. Releases are validated against Pi 0.99.1.
 
+**Pi's virtual models are not supported.** The patcher selects replacement rules by the selected
+model, not the model that answers a request. Pi's experimental virtual models, registered with
+`pi.registerVirtualModel()`, stay selected while Pi routes each request to a physical model, so
+the rules for the routed provider and model do not apply. Select the model directly.
+
 ## Install
 
 ```bash
