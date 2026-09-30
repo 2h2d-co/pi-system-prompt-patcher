@@ -6,7 +6,7 @@ The extension rewrites the top-level `system` field and `role: "system"` entries
 immediately before Pi sends a compatible provider request. It supports string prompts and arrays
 of text content blocks. It ignores payloads without either form of system instructions.
 
-Requires Pi `>=0.87.0 <0.88.0`.
+Requires Pi `>=0.87.0 <0.100.0`. Releases are validated against Pi 0.99.1.
 
 ## Install
 
@@ -95,8 +95,8 @@ select another runtime's package metadata. The binding applies only to that task
 ### Live validation
 
 Run `mise run test:live` to test the packed extension through the shipped Pi CLI
-with the existing Anthropic login. The minimum supported Pi version is 0.87.0, and
-the test asserts that the selected CLI reports exactly that tested version. It
+with the existing Anthropic login. The test asserts that the selected CLI reports
+exactly Pi 0.99.1, the tested version. It
 verifies outgoing system replacements, configuration changes, prompt reload, and
 session resume:
 
@@ -117,7 +117,7 @@ from the current working directory. An empty value, a missing file, a directory,
 an empty file, or malformed archive contents fail the test. It never falls back
 to packing the worktree.
 
-Set `PI_TEST_CLI_PATH` to the `dist/bundle/cli.js` of another Pi 0.87.0 installation
+Set `PI_TEST_CLI_PATH` to the `dist/bundle/cli.js` of another Pi 0.99.1 installation
 to test that executable. Each CLI subprocess sets `PI_PACKAGE_DIR` to the selected
 executable's package directory. The Mise task also binds `PI_PACKAGE_DIR` to the
 repository's Pi dependency for the token lookup and the test process. Neither

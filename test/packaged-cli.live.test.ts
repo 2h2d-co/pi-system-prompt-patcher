@@ -9,7 +9,7 @@ import { RpcClient } from "../node_modules/@earendil-works/pi-coding-agent/dist/
 import { archiveEntries, packageArchive } from "./package-archive.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const piVersion = "0.87.0";
+const piVersion = "0.99.1";
 
 function systemPrompt(revision: number): string {
   return `Reply with exactly ORIGINAL_MARKER and no other text. Prompt revision: PROMPT_REVISION_${revision}.`;
