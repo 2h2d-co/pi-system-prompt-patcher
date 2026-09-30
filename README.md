@@ -6,7 +6,9 @@ The extension rewrites the top-level `system` field and `role: "system"` entries
 immediately before Pi sends a compatible provider request. It supports string prompts and arrays
 of text content blocks. It ignores payloads without either form of system instructions.
 
-Requires Pi `>=0.99.1 <0.100.0`. Releases are validated against Pi 0.99.1.
+Requires Pi `>=0.99.1 <0.100.0`. Releases are validated against Pi 0.99.1. The
+extension refuses to load on a Pi older than 0.99.1, because Pi does not enforce
+the package's peer range when it installs packages.
 
 **Pi's virtual models are not supported.** The patcher selects replacement rules by the selected
 model, not the model that answers a request. Pi's experimental virtual models, registered with

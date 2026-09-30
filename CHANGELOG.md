@@ -4,7 +4,7 @@
 
 ### Changed
 
-- Require Pi 0.99.1 or newer within 0.99.x. Pi 0.87.x is no longer supported.
+- Require Pi 0.99.1 or newer. The extension refuses to load on an older Pi.
 
 ## [0.0.6] - 2026-09-30
 
