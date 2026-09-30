@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [0.0.6] - 2026-09-30
+
 ### Changed
 
 - Support Pi 0.99.x in addition to Pi 0.87.x. Releases are validated against Pi 0.99.1.
