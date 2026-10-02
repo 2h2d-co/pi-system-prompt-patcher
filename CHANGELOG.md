@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## [0.0.8] - 2026-10-02
+
+### Changed
+
+- Require Pi `>=1.0.0 <1.1.0`. The extension refuses to load on older runtimes.
+  System prompt replacement behavior is unchanged. After upgrading Pi, restart it
+  and recheck exact-match targets against its revised prompt text and documentation paths.
+
 ## [0.0.7] - 2026-09-30
 
 ### Changed
