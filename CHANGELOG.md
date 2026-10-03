@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- Require Pi `>=1.0.1 <1.1.0`. The extension refuses to load on older runtimes.
+
 ## [0.0.8] - 2026-10-02
 
 ### Changed

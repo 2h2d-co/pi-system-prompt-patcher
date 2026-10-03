@@ -192,9 +192,17 @@ test("patches every system instruction without changing conversation or tool blo
   withProviderReplacements([{ target: "old", replacement: "new" }], () => {
     const handler = registerExtension();
     const { ctx, aborts, notifications } = createContext();
+    // Pi 1.0.1 defines tools added mid-conversation inline.
     const toolAddition = {
       type: "tool_addition",
-      tool: { type: "tool_reference", name: "old" },
+      tool: {
+        type: "tool_definition",
+        definition: {
+          name: "old",
+          description: "old tool",
+          input_schema: { type: "object", properties: {} },
+        },
+      },
     };
     const toolRemoval = {
       type: "tool_removal",
@@ -307,7 +315,17 @@ test("does not accept target matches in conversation or tool metadata", (t) => {
         {
           role: "system",
           content: [
-            { type: "tool_addition", tool: { type: "tool_reference", name: "missing" } },
+            {
+              type: "tool_addition",
+              tool: {
+                type: "tool_definition",
+                definition: {
+                  name: "missing",
+                  description: "missing",
+                  input_schema: { type: "object", properties: {} },
+                },
+              },
+            },
             { type: "other", text: "missing" },
           ],
         },
