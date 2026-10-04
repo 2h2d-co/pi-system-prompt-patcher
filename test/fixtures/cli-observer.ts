@@ -4,7 +4,8 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 /**
  * Records what the patched provider payload carried as system instructions. The live test
  * compares the marker with the assistant reply and the prompt revision with the SYSTEM.md
- * revision Pi was expected to load, so a no-op reload or a stale prompt is detected.
+ * revision Pi was expected to load, so a no-op reload or a stale prompt is detected. It also
+ * records the Pi version that the placeholder rule wrote in place of the documentation path.
  */
 export default function (pi: ExtensionAPI): void {
   pi.registerCommand("release-test-reload", {
@@ -29,9 +30,11 @@ export default function (pi: ExtensionAPI): void {
     const revisions = fragments.flatMap((fragment) =>
       [...fragment.matchAll(/PROMPT_REVISION_(\d+)/g)].map((match) => Number(match[1])),
     );
+    assert.doesNotMatch(system, /README\.md/);
     pi.appendEntry("release-test-system", {
       marker: system.includes("PATCH_SECOND") ? "PATCH_SECOND" : "PATCH_FIRST",
       revision: revisions.at(-1) ?? null,
+      docs: /DOCS_(\d+\.\d+\.\d+)\./.exec(system)?.[1] ?? null,
     });
   });
 }

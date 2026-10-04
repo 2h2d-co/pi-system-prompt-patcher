@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added
+
+- Fill in `{piPackageDir}` and `{piVersion}` placeholders in replacement targets and
+  replacements with the running Pi's package directory and version. One rule can now match the
+  documentation paths of any Pi installation instead of a single install path.
+
 ### Changed
 
 - Require Pi `>=1.0.1 <1.1.0`. The extension refuses to load on older runtimes.

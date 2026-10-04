@@ -12,8 +12,20 @@ import { archiveEntries, packageArchive } from "./package-archive.ts";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const piVersion = manifest.devDependencies["@earendil-works/pi-coding-agent"];
 
-function systemPrompt(revision: number): string {
-  return `Reply with exactly ORIGINAL_MARKER and no other text. Prompt revision: PROMPT_REVISION_${revision}.`;
+// The documentation line names the selected Pi's package directory, as Pi's default prompt does.
+// A placeholder rule must match it there, so the patcher resolves the running Pi.
+function systemPrompt(revision: number, piPackageDir: string): string {
+  return (
+    `Reply with exactly ORIGINAL_MARKER and no other text. Prompt revision: PROMPT_REVISION_${revision}. ` +
+    `Documentation: ${piPackageDir}/README.md.`
+  );
+}
+
+function rules(marker: string): string {
+  return JSON.stringify([
+    { target: "ORIGINAL_MARKER", replacement: marker },
+    { target: "Documentation: {piPackageDir}/README.md.", replacement: "DOCS_{piVersion}." },
+  ]);
 }
 
 async function assistantTexts(client: RpcClient): Promise<string[]> {
@@ -55,6 +67,7 @@ test(
       process.env["PI_TEST_CLI_PATH"] ??
         join(root, "node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js"),
     );
+    const piPackageDir = resolve(dirname(cli), "../..");
     const env = {
       HOME: temporary,
       PI_CODING_AGENT_DIR: join(temporary, "agent"),
@@ -85,7 +98,7 @@ test(
       }),
     );
     const promptFile = join(env.PI_CODING_AGENT_DIR, "SYSTEM.md");
-    await writeFile(promptFile, systemPrompt(1));
+    await writeFile(promptFile, systemPrompt(1, piPackageDir));
     await writeFile(
       join(env.PI_CODING_AGENT_DIR, "pi-system-prompt-patcher.json"),
       JSON.stringify({
@@ -93,10 +106,7 @@ test(
       }),
     );
     const replacements = join(env.PI_CODING_AGENT_DIR, "replacements.json");
-    await writeFile(
-      replacements,
-      JSON.stringify([{ target: "ORIGINAL_MARKER", replacement: "PATCH_FIRST" }]),
-    );
+    await writeFile(replacements, rules("PATCH_FIRST"));
     const sessionFile = join(temporary, "session.jsonl");
     const options = {
       cliPath: cli,
@@ -139,18 +149,19 @@ test(
       );
       const latest = observations.at(-1);
       assert.ok(latest?.type === "custom");
-      assert.deepEqual(latest.data, { marker: expectedMarker, revision: expectedRevision });
+      assert.deepEqual(latest.data, {
+        marker: expectedMarker,
+        revision: expectedRevision,
+        docs: piVersion,
+      });
       assert.doesNotMatch(client.getStderr(), /Failed to load extension|not a function/);
     }
     await turn("PATCH_FIRST", 1);
-    await writeFile(
-      replacements,
-      JSON.stringify([{ target: "ORIGINAL_MARKER", replacement: "PATCH_SECOND" }]),
-    );
+    await writeFile(replacements, rules("PATCH_SECOND"));
     await turn("PATCH_SECOND", 1);
     // A reload must deliver the rewritten SYSTEM.md to the provider, not only re-run the
     // patcher against the previous prompt.
-    await writeFile(promptFile, systemPrompt(2));
+    await writeFile(promptFile, systemPrompt(2, piPackageDir));
     await client.prompt("/release-test-reload");
     await turn("PATCH_SECOND", 2);
     const before = await client.getState();
@@ -174,7 +185,7 @@ test(
     assert.deepEqual(await assistantTexts(client), [...history, "PATCH_SECOND"]);
     await client.stop();
     t.diagnostic(
-      `Pi ${piVersion}: packed extension, real Anthropic payloads, config reload, prompt reload, and resume passed`,
+      `Pi ${piVersion}: packed extension, real Anthropic payloads, Pi placeholders, config reload, prompt reload, and resume passed`,
     );
   },
 );

@@ -4,8 +4,8 @@
     "replacement": "You are an expert coding assistant operating inside cult code, a coding agent harness."
   },
   {
-    "target": "/Users/kaan/.pi/pi-coding-agent/",
-    "replacement": "/Users/kaan/.cult-code/cult-code-coding-agent/"
+    "target": "{piPackageDir}/",
+    "replacement": "/opt/cult-code/{piVersion}/cult-code-coding-agent/"
   },
   {
     "target": "~/.pi/agent/",

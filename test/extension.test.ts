@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import test from "node:test";
+import { getPackageDir, VERSION } from "@earendil-works/pi-coding-agent";
 import extension, {
+  expandPlaceholders,
   type BeforeProviderRequestHandler,
   type JsonValue,
   type PromptPatcherApi,
@@ -13,6 +15,8 @@ import extension, {
 const SETTINGS_FILE = "pi-system-prompt-patcher.json";
 const CULT_FIXTURE_FILE = "cult-system-prompt-replacements.json";
 const CULT_FIXTURE_URL = new URL(`./fixtures/${CULT_FIXTURE_FILE}`, import.meta.url);
+// The running Pi's values, as the extension substitutes them for placeholders.
+const RUNTIME = { piPackageDir: resolve(getPackageDir()), piVersion: VERSION };
 
 type Replacement = {
   target: string;
@@ -367,7 +371,10 @@ test("discards patches to all system fragments when a later target is absent", (
 
 test("loads the representative cult replacement fixture", () => {
   const fixtureText = readFileSync(CULT_FIXTURE_URL, "utf8");
-  const replacements = parseReplacements(fixtureText);
+  const replacements = parseReplacements(fixtureText).map(({ target, replacement }) => ({
+    target: expandPlaceholders(target, RUNTIME),
+    replacement: expandPlaceholders(replacement, RUNTIME),
+  }));
   const original = replacements.map(({ target }) => target).join("\n");
   const expected = replacements.reduce(
     (text, { target, replacement }) => text.replaceAll(target, replacement),
@@ -396,6 +403,50 @@ test("loads the representative cult replacement fixture", () => {
   );
 });
 
+test("expands Pi placeholders in targets and replacements to the running Pi", () => {
+  withProviderReplacements(
+    [
+      {
+        target: "Main documentation: {piPackageDir}/README.md",
+        replacement: "Main documentation: /opt/cult/{piVersion}/README.md {other}",
+      },
+    ],
+    () => {
+      const handler = registerExtension();
+      const { ctx, notifications } = createContext();
+
+      const result = handler(
+        { payload: { system: `Main documentation: ${RUNTIME.piPackageDir}/README.md` } },
+        ctx,
+      );
+
+      assert.deepEqual(result, {
+        system: `Main documentation: /opt/cult/${RUNTIME.piVersion}/README.md {other}`,
+      });
+      assert.deepEqual(notifications, []);
+    },
+  );
+});
+
+test("matches a placeholder target only against the running Pi's directory", (t) => {
+  withProviderReplacements([{ target: "{piPackageDir}/", replacement: "/opt/cult/" }], () => {
+    t.mock.method(console, "error", () => undefined);
+    const handler = registerExtension();
+    const { ctx, aborts, notifications } = createContext();
+    const payload = { system: "Main documentation: /another/pi-coding-agent/README.md" };
+
+    const result = handler({ payload }, ctx);
+
+    assert.equal(result, undefined);
+    assert.equal(aborts.count, 1);
+    const notification = getOnlyNotification(notifications);
+    assert.ok(
+      notification.includes(`Missing target: ${JSON.stringify(`${RUNTIME.piPackageDir}/`)}`),
+    );
+    assert.ok(notification.includes('Configured target: "{piPackageDir}/"'));
+  });
+});
+
 test("aborts the turn and leaves the payload unchanged when a target is missing", (t) => {
   withProviderReplacements(
     [
@@ -417,6 +468,7 @@ test("aborts the turn and leaves the payload unchanged when a target is missing"
       const notification = getOnlyNotification(notifications);
       assert.match(notification, /replacement 2 target was not found/);
       assert.match(notification, /Missing target: "missing"/);
+      assert.doesNotMatch(notification, /Configured target/);
       assert.deepEqual(errors, notifications);
     },
   );

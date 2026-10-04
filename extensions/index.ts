@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { VERSION } from "@earendil-works/pi-coding-agent";
+import { getPackageDir, VERSION } from "@earendil-works/pi-coding-agent";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
@@ -36,6 +36,26 @@ type Replacement = {
   target: string;
   replacement: string;
 };
+
+type ExpandedReplacement = Replacement & {
+  configuredTarget: string;
+};
+
+/** Runtime values that rule targets and replacements can reference by placeholder. */
+export type RuntimeValues = {
+  piPackageDir: string;
+  piVersion: string;
+};
+
+/**
+ * Replace `{piPackageDir}` with the running Pi's package directory and `{piVersion}` with its
+ * version, so one rule matches every Pi installation instead of a single install path.
+ */
+export function expandPlaceholders(text: string, values: RuntimeValues): string {
+  return text
+    .replaceAll("{piPackageDir}", values.piPackageDir)
+    .replaceAll("{piVersion}", values.piVersion);
+}
 
 type ProviderSettings = {
   replacementFile?: string;
@@ -102,13 +122,20 @@ export default function systemPromptPatcher(pi: PromptPatcherApi) {
       return;
     }
 
-    return patchSystemPrompt(event.payload, replacements, replacementPath, ctx);
+    // Pi resolves its documentation paths the same way when it builds the system prompt.
+    const values = { piPackageDir: resolve(getPackageDir()), piVersion: VERSION };
+    const expanded = replacements.map(({ target, replacement }) => ({
+      target: expandPlaceholders(target, values),
+      replacement: expandPlaceholders(replacement, values),
+      configuredTarget: target,
+    }));
+    return patchSystemPrompt(event.payload, expanded, replacementPath, ctx);
   });
 }
 
 function patchSystemPrompt(
   payload: JsonObject,
-  replacements: Replacement[],
+  replacements: ExpandedReplacement[],
   replacementPath: string,
   ctx: PromptPatcherContext,
 ): JsonObject | undefined {
@@ -124,7 +151,7 @@ function patchSystemPrompt(
 
   let patched = payload;
 
-  for (const [index, { target, replacement }] of replacements.entries()) {
+  for (const [index, { target, replacement, configuredTarget }] of replacements.entries()) {
     let found = false;
     patched = mapSystemPromptText(patched, (text) => {
       if (text.includes(target)) found = true;
@@ -132,7 +159,7 @@ function patchSystemPrompt(
     });
 
     if (!found) {
-      reportMissingTarget(ctx, index, target, replacementPath);
+      reportMissingTarget(ctx, index, target, configuredTarget, replacementPath);
       return undefined;
     }
   }
@@ -170,18 +197,20 @@ function reportMissingTarget(
   ctx: PromptPatcherContext,
   index: number,
   target: string,
+  configuredTarget: string,
   replacementPath: string,
 ) {
-  reportError(
-    ctx,
-    [
-      `${EXTENSION_ID}: replacement ${index + 1} target was not found in the request system prompt.`,
-      "No prompt replacements were applied for this request.",
-      "Aborting the current agent turn.",
-      `Replacement file: ${replacementPath}`,
-      `Missing target: ${JSON.stringify(target)}`,
-    ].join("\n"),
-  );
+  const lines = [
+    `${EXTENSION_ID}: replacement ${index + 1} target was not found in the request system prompt.`,
+    "No prompt replacements were applied for this request.",
+    "Aborting the current agent turn.",
+    `Replacement file: ${replacementPath}`,
+    `Missing target: ${JSON.stringify(target)}`,
+  ];
+  if (configuredTarget !== target) {
+    lines.push(`Configured target: ${JSON.stringify(configuredTarget)}`);
+  }
+  reportError(ctx, lines.join("\n"));
   ctx.abort();
 }
 

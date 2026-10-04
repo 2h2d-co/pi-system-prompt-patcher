@@ -70,6 +70,27 @@ Each replacement file contains an array:
 ]
 ```
 
+Targets and replacements can use two placeholders, which the extension fills in for every
+request:
+
+- `{piPackageDir}`: the running Pi's package directory, without a trailing slash. This is the
+  directory Pi names in its documentation paths, such as `Main documentation: .../README.md`.
+- `{piVersion}`: the running Pi's version, such as `1.0.1`.
+
+Use them instead of a fixed installation path, so one rule matches every Pi installation and
+version:
+
+```json
+[
+  {
+    "target": "{piPackageDir}/",
+    "replacement": "/opt/cult-code/{piVersion}/cult-code-coding-agent/"
+  }
+]
+```
+
+Other text in braces is matched and inserted literally.
+
 Replacements are:
 
 - applied in array order;
@@ -84,7 +105,8 @@ and non-text content blocks remain unchanged. The extension does not patch OpenA
 or developer messages.
 
 If a target is absent from all system instructions, the extension discards every patch, reports
-the missing target, and aborts the current agent turn. Invalid or unreadable settings and replacement
+the missing target, and aborts the current agent turn. For a target with placeholders, the report
+shows both the filled-in target and the configured one. Invalid or unreadable settings and replacement
 files are reported and the request continues unchanged.
 
 ## Development
