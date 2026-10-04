@@ -112,7 +112,7 @@ files are reported and the request continues unchanged.
 ## Development
 
 ```bash
-npm install
+mise run init
 npm run check
 npm test
 ```
