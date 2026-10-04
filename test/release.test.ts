@@ -8,7 +8,7 @@ import test, { type TestContext } from "node:test";
 import { fileURLToPath } from "node:url";
 
 // These tests evaluate scripts/release.ts with every child process intercepted. No real
-// Git, npm, Mise, Pi, or provider call happens, and no temporary archive survives.
+// Git, npm, Pi, or provider call happens, and no temporary archive survives.
 const root = resolve(fileURLToPath(new URL("../", import.meta.url)));
 const packageName = "pi-system-prompt-patcher";
 const releasedVersion = manifestVersion();
@@ -56,7 +56,7 @@ function harness(t: TestContext, scenario: Scenario): Harness {
   const calls: string[] = [];
   const archives: string[] = [];
   const cwds = new Map<string, string>();
-  const spawnError = Object.assign(new Error("spawn mise ENOENT"), { code: "ENOENT" });
+  const spawnError = Object.assign(new Error("spawn node ENOENT"), { code: "ENOENT" });
   let signed = false;
   let liveEnv: NodeJS.ProcessEnv | undefined;
   let liveArchive: string | undefined;
@@ -117,19 +117,19 @@ function harness(t: TestContext, scenario: Scenario): Harness {
           writeFileSync(archive, contents);
           archives.push(archive);
           stdout = JSON.stringify([{ name: packageName, version, filename, files }]);
+        } else if (verb === "run") {
+          assert.deepEqual(args.slice(2), ["test:live"]);
+          liveEnv = options.env;
+          liveArchive = options.env?.["PI_PACKAGE_ARCHIVE"];
+          // The candidate must exist while the live validation runs.
+          liveContents = liveArchive === undefined ? undefined : readFileSync(liveArchive, "utf8");
+          if (scenario.live === "spawn-error") {
+            error = spawnError;
+            status = null;
+          } else {
+            status = scenario.live ?? 0;
+          }
         } else throw new Error(`Unexpected npm command: ${operation}`);
-      } else if (command === "mise") {
-        assert.deepEqual(args, ["run", "test:live"]);
-        liveEnv = options.env;
-        liveArchive = options.env?.["PI_PACKAGE_ARCHIVE"];
-        // The candidate must exist while the live validation runs.
-        liveContents = liveArchive === undefined ? undefined : readFileSync(liveArchive, "utf8");
-        if (scenario.live === "spawn-error") {
-          error = spawnError;
-          status = null;
-        } else {
-          status = scenario.live ?? 0;
-        }
       } else throw new Error(`Unexpected child command: ${operation}`);
       return {
         pid: 0,
@@ -171,14 +171,14 @@ function harness(t: TestContext, scenario: Scenario): Harness {
 }
 
 function liveCalls(calls: string[]): number {
-  return calls.filter((call) => call === "mise run test:live").length;
+  return calls.filter((call) => call === "npm run test:live").length;
 }
 
 test("release validates the exact candidate archive once before signing and tagging", async (t) => {
   const release = harness(t, {});
   await release.run();
   assert.equal(liveCalls(release.calls), 1);
-  assert.equal(release.cwds.get("mise run test:live"), root);
+  assert.equal(release.cwds.get("npm run test:live"), root);
   assert.equal(release.liveArchive, release.archives[0]);
   assert.ok(release.liveArchive?.startsWith("/"));
   assert.equal(release.liveContents, candidate);
@@ -187,7 +187,7 @@ test("release validates the exact candidate archive once before signing and tagg
   assert.ok(release.calls.includes(`git tag v${releasedVersion}`));
   assert.equal(release.archives.length, 2);
   assert.ok(release.archives.every((archive) => !existsSync(archive)));
-  const liveIndex = release.calls.indexOf("mise run test:live");
+  const liveIndex = release.calls.indexOf("npm run test:live");
   const commitIndex = release.calls.findIndex((call) => call.startsWith("git commit "));
   const rebuildIndex = release.calls.findLastIndex((call) =>
     call.startsWith("git checkout-index "),
@@ -204,7 +204,7 @@ test("release validates the exact candidate archive once before signing and tagg
 
 test("release stops before signing when the live validation exits nonzero", async (t) => {
   const release = harness(t, { live: 1 });
-  await assert.rejects(release.run(), /mise run test:live exited with 1/);
+  await assert.rejects(release.run(), /synthetic-npm run test:live exited with 1/);
   assert.equal(liveCalls(release.calls), 1);
   assert.ok(release.calls.some((call) => call.startsWith("npm version ")));
   assert.ok(release.calls.includes("git add package-lock.json package.json"));

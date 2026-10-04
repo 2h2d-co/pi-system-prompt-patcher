@@ -55,13 +55,9 @@ test(
       process.env["PI_TEST_CLI_PATH"] ??
         join(root, "node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js"),
     );
-    // Bind the CLI's package metadata to the selected executable so an inherited
-    // PI_PACKAGE_DIR cannot describe a different runtime.
-    const piRoot = resolve(dirname(cli), "../..");
     const env = {
       HOME: temporary,
       PI_CODING_AGENT_DIR: join(temporary, "agent"),
-      PI_PACKAGE_DIR: piRoot,
       PI_OFFLINE: "1",
       PI_TELEMETRY: "0",
       PI_PATCHER_LIVE_API_KEY: token,

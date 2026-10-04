@@ -95,13 +95,13 @@ npm run check
 npm test
 ```
 
-`mise run check` runs the same checks and tests. It binds `PI_PACKAGE_DIR` to the
-repository's Pi dependency for the in-process SDK tests so an inherited value cannot
-select another runtime's package metadata. The binding applies only to that task.
+`mise run check` runs the same checks and tests. `npm test` and `npm run test:live`
+remove an inherited `PI_PACKAGE_DIR` from their test processes, so Pi resolves the
+repository dependency's own package directory.
 
 ### Live validation
 
-Run `mise run test:live` to test the packed extension through the shipped Pi CLI
+Run `npm run test:live` to test the packed extension through the shipped Pi CLI
 with the existing Anthropic login. The test asserts that the selected CLI reports
 the version of the repository's Pi development dependency. It verifies outgoing
 system replacements, configuration changes, prompt reload, and session resume:
@@ -124,10 +124,9 @@ an empty file, or malformed archive contents fail the test. It never falls back
 to packing the worktree.
 
 Set `PI_TEST_CLI_PATH` to the `dist/bundle/cli.js` of another installation of
-the same Pi version to test that executable. Each CLI subprocess sets
-`PI_PACKAGE_DIR` to the selected executable's package directory. The Mise task
-also binds `PI_PACKAGE_DIR` to the repository's Pi dependency for the token
-lookup and the test process. Neither setting changes other Pi launches.
+the same Pi version to test that executable. `scripts/test-live.ts` reads the
+Anthropic token through the repository Pi's `pi auth print-bearer-token`. Each CLI
+subprocess resolves its own package directory.
 
 ## Try locally
 
@@ -142,7 +141,7 @@ pi --no-extensions -e .
    are clean, `HEAD` matches `origin/main`, the tag does not exist, and
    `CHANGELOG.md` has the version's section. It then updates and stages the version
    in `package.json` and `package-lock.json`, builds the exact package from the
-   staged files, and runs `mise run test:live` with `PI_PACKAGE_ARCHIVE` set to that
+   staged files, and runs `npm run test:live` with `PI_PACKAGE_ARCHIVE` set to that
    archive. Only after that test passes does it record the archive's SHA-256 in an
    SSH-signed release commit, prove a clean rebuild of the committed tree is
    reproducible, and create a lightweight tag. The rebuild does not repeat the live
