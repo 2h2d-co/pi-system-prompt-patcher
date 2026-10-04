@@ -103,8 +103,7 @@ select another runtime's package metadata. The binding applies only to that task
 
 Run `mise run test:live` to test the packed extension through the shipped Pi CLI
 with the existing Anthropic login. The test asserts that the selected CLI reports
-exactly Pi 1.0.1, the tested version. It
-verifies outgoing system replacements, configuration changes, prompt reload, and
+the version of the repository's Pi development dependency. It verifies outgoing system replacements, configuration changes, prompt reload, and
 session resume:
 
 - the assistant reply and the observed provider payload carry the configured
@@ -124,8 +123,8 @@ from the current working directory. An empty value, a missing file, a directory,
 an empty file, or malformed archive contents fail the test. It never falls back
 to packing the worktree.
 
-Set `PI_TEST_CLI_PATH` to the `dist/bundle/cli.js` of another Pi 1.0.1 installation
-to test that executable. Each CLI subprocess sets `PI_PACKAGE_DIR` to the selected
+Set `PI_TEST_CLI_PATH` to the `dist/bundle/cli.js` of another installation of
+the same Pi version to test that executable. Each CLI subprocess sets `PI_PACKAGE_DIR` to the selected
 executable's package directory. The Mise task also binds `PI_PACKAGE_DIR` to the
 repository's Pi dependency for the token lookup and the test process. Neither
 setting changes other Pi launches.

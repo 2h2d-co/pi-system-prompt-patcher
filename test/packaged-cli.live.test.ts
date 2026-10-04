@@ -6,10 +6,11 @@ import { dirname, join, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { RpcClient } from "../node_modules/@earendil-works/pi-coding-agent/dist/modes/rpc/rpc-client.js";
+import manifest from "../package.json" with { type: "json" };
 import { archiveEntries, packageArchive } from "./package-archive.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const piVersion = "1.0.1";
+const piVersion = manifest.devDependencies["@earendil-works/pi-coding-agent"];
 
 function systemPrompt(revision: number): string {
   return `Reply with exactly ORIGINAL_MARKER and no other text. Prompt revision: PROMPT_REVISION_${revision}.`;
@@ -71,6 +72,7 @@ test(
         encoding: "utf8",
       }).trim(),
       piVersion,
+      "Live validation requires the Pi version pinned as the development dependency.",
     );
     await mkdir(env.PI_CODING_AGENT_DIR);
     await writeFile(
