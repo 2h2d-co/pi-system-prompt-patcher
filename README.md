@@ -125,9 +125,9 @@ to packing the worktree.
 
 Set `PI_TEST_CLI_PATH` to the `dist/bundle/cli.js` of another installation of
 the same Pi version to test that executable. Each CLI subprocess sets
-`PI_PACKAGE_DIR` to the selected executable's package directory. The Mise task also binds `PI_PACKAGE_DIR` to the
-repository's Pi dependency for the token lookup and the test process. Neither
-setting changes other Pi launches.
+`PI_PACKAGE_DIR` to the selected executable's package directory. The Mise task
+also binds `PI_PACKAGE_DIR` to the repository's Pi dependency for the token
+lookup and the test process. Neither setting changes other Pi launches.
 
 ## Try locally
 
