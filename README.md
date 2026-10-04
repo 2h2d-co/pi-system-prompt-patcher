@@ -113,8 +113,7 @@ files are reported and the request continues unchanged.
 
 ```bash
 mise run init
-npm run check
-npm test
+mise run check
 ```
 
 `mise run check` runs the same checks and tests. `npm test` and `npm run test:live`

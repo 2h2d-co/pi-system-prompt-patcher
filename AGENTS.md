@@ -2,7 +2,7 @@
 
 - This project is a Pi package with a TypeScript extension entrypoint.
 - Pi extensions run with full system permissions; keep side effects explicit and documented.
-- Run `npm run check` and `npm test` before committing meaningful code changes.
+- Run `mise run check` before committing meaningful code changes.
 - Use Conventional Commits and maintain `CHANGELOG.md` in Keep a Changelog style; add entries for `feat:` and `fix:` changes under `Unreleased`.
 - Keep changelog entries under `Unreleased` for prereleases and move them into a release section only for stable releases.
 - Never bind `PI_PACKAGE_DIR` for tests. Pi resolves its own package directory; `npm test` and `npm run test:live` remove an inherited value instead.
