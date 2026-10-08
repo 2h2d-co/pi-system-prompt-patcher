@@ -71,7 +71,6 @@ test(
     const env = {
       HOME: temporary,
       PI_CODING_AGENT_DIR: join(temporary, "agent"),
-      PI_OFFLINE: "1",
       PI_TELEMETRY: "0",
       PI_PATCHER_LIVE_API_KEY: token,
     };
@@ -115,11 +114,6 @@ test(
       provider: "anthropic",
       model: "claude-sonnet-5",
       args: [
-        "--offline",
-        "--no-skills",
-        "--no-prompt-templates",
-        "--no-context-files",
-        "--no-tools",
         "--thinking",
         "low",
         "--session",

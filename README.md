@@ -6,8 +6,8 @@ The extension rewrites the top-level `system` field and `role: "system"` entries
 immediately before Pi sends a compatible provider request. It supports string prompts and arrays
 of text content blocks. It ignores payloads without either form of system instructions.
 
-Requires Pi `>=1.0.1 <1.1.0`. Releases are validated against Pi 1.0.1. The
-extension refuses to load on a Pi older than 1.0.1, because Pi does not enforce
+Requires Pi `>=1.1.0 <1.2.0`. Releases are validated against Pi 1.1.0. The
+extension refuses to load on a Pi older than 1.1.0, because Pi does not enforce
 the package's peer range when it installs packages.
 
 **Pi's virtual models are not supported.** The patcher selects replacement rules by the selected
@@ -75,7 +75,7 @@ request:
 
 - `{piPackageDir}`: the running Pi's package directory, without a trailing slash. This is the
   directory Pi names in its documentation paths, such as `Main documentation: .../README.md`.
-- `{piVersion}`: the running Pi's version, such as `1.0.1`.
+- `{piVersion}`: the running Pi's version, such as `1.1.0`.
 
 Use them instead of a fixed installation path, so one rule matches every Pi installation and
 version:
@@ -152,7 +152,7 @@ subprocess resolves its own package directory.
 ## Try locally
 
 ```bash
-pi --no-extensions -e .
+pi -e .
 ```
 
 ## Release staging
