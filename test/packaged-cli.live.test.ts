@@ -7,6 +7,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { RpcClient } from "../node_modules/@earendil-works/pi-coding-agent/dist/modes/rpc/rpc-client.js";
 import manifest from "../package.json" with { type: "json" };
+import { describeFailure, errorLog } from "./error-log.ts";
 import { archiveEntries, packageArchive } from "./package-archive.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -32,7 +33,7 @@ async function assistantTexts(client: RpcClient): Promise<string[]> {
   const texts: string[] = [];
   for (const message of await client.getMessages()) {
     if (message.role !== "assistant") continue;
-    assert.equal(message.errorMessage, undefined);
+    assert.ok(message.errorMessage === undefined, describeFailure(message));
     texts.push(
       message.content
         .map((block) => (block.type === "text" ? block.text : ""))
@@ -124,8 +125,10 @@ test(
         join(root, "test/fixtures/cli-observer.ts"),
       ],
     };
+    const errors = errorLog(t);
     let client = new RpcClient(options);
     t.after(async () => client.stop());
+    client.onEvent(errors.rpcEvent);
     await client.start();
     async function turn(expectedMarker: string, expectedRevision: number): Promise<void> {
       const events = await client.promptAndWait(
@@ -168,6 +171,7 @@ test(
     await client.stop();
     // A restart must resume the persisted session rather than start a fresh one.
     client = new RpcClient(options);
+    client.onEvent(errors.rpcEvent);
     await client.start();
     const after = await client.getState();
     assert.equal(after.sessionId, before.sessionId);
