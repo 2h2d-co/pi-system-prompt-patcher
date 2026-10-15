@@ -66,7 +66,7 @@ type Settings = {
   providers: Record<string, ProviderSettings>;
 };
 
-export const MINIMUM_PI_VERSION = "1.1.0";
+export const MINIMUM_PI_VERSION = "1.2.0";
 
 /** Compare dotted numeric release versions; prerelease suffixes rank below their release. */
 export function atLeastVersion(version: unknown, minimum: string): boolean {
