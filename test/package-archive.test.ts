@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from "node
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import test from "node:test";
-import { archiveEntries, packageArchive } from "./package-archive.ts";
+import { archiveEntries, packageArchive } from "./support/package-archive.ts";
 
 // Each temporary directory has no package.json, so an accidental npm pack would fail.
 async function workspace(t: { after: (fn: () => Promise<void>) => void }): Promise<string> {

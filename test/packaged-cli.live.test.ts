@@ -7,8 +7,8 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { RpcClient } from "../node_modules/@earendil-works/pi-coding-agent/dist/modes/rpc/rpc-client.js";
 import manifest from "../package.json" with { type: "json" };
-import { describeFailure, errorLog } from "./error-log.ts";
-import { archiveEntries, packageArchive } from "./package-archive.ts";
+import { describeFailure, errorLog } from "./support/error-log.ts";
+import { archiveEntries, packageArchive } from "./support/package-archive.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const piVersion = manifest.devDependencies["@earendil-works/pi-coding-agent"];
@@ -122,7 +122,7 @@ test(
         "-e",
         join(temporary, "package"),
         "-e",
-        join(root, "test/fixtures/cli-observer.ts"),
+        join(root, "test/support/cli-observer.ts"),
       ],
     };
     const errors = errorLog(t);
