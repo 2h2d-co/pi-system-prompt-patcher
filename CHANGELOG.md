@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Require Pi `>=1.3.0 <1.4.0`. Restart Pi after upgrading its runtime.
+  System prompt replacement behavior is unchanged.
+
 ## [0.0.11] - 2026-10-15
 
 ### Changed
