@@ -131,8 +131,10 @@ test(
     client.onEvent(errors.rpcEvent);
     await client.start();
     async function turn(expectedMarker: string, expectedRevision: number): Promise<void> {
+      // Earlier replies name the previous marker. Without the reminder, a model sometimes repeats
+      // its last answer although the patched system prompt names a new marker.
       const events = await client.promptAndWait(
-        "Return the marker required by your system instructions.",
+        "Return the marker your system instructions require now. It may differ from your earlier replies.",
         undefined,
         90_000,
       );
@@ -140,17 +142,23 @@ test(
         events.filter((event: { type: string }) => event.type === "extension_error"),
         [],
       );
-      assert.equal(await client.getLastAssistantText(), expectedMarker);
+      // Check the patched payload before the reply, so a failure shows whether the patcher or the
+      // model went wrong.
       const observations = (await client.getEntries()).entries.filter(
         (entry) => entry.type === "custom" && entry.customType === "release-test-system",
       );
       const latest = observations.at(-1);
       assert.ok(latest?.type === "custom");
-      assert.deepEqual(latest.data, {
-        marker: expectedMarker,
-        revision: expectedRevision,
-        docs: piVersion,
-      });
+      assert.deepEqual(
+        latest.data,
+        { marker: expectedMarker, revision: expectedRevision, docs: piVersion },
+        "The provider payload carries the expected patched system prompt.",
+      );
+      assert.equal(
+        await client.getLastAssistantText(),
+        expectedMarker,
+        "The model replies with the marker from the patched system prompt.",
+      );
       assert.doesNotMatch(client.getStderr(), /Failed to load extension|not a function/);
     }
     await turn("PATCH_FIRST", 1);
