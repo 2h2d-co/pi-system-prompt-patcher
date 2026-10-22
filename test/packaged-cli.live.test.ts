@@ -113,7 +113,7 @@ test(
       cwd: temporary,
       env,
       provider: "anthropic",
-      model: "claude-sonnet-5",
+      model: "claude-sonnet-5-5",
       args: [
         "--thinking",
         "low",

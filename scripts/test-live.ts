@@ -11,7 +11,7 @@ delete env["PI_PACKAGE_DIR"];
 
 const token = execFileSync(
   process.execPath,
-  [pi, "auth", "print-bearer-token", "--provider", "anthropic", "--model", "claude-sonnet-5"],
+  [pi, "auth", "print-bearer-token", "--provider", "anthropic", "--model", "claude-sonnet-5-5"],
   { cwd: root, env, encoding: "utf8", stdio: ["ignore", "pipe", "inherit"] },
 ).trim();
 const result = spawnSync(
