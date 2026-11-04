@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.0.14] - 2026-11-04
+
 ### Added
 
 - Replacement rules accept `"optional": true`. An optional rule applies where its target occurs and
