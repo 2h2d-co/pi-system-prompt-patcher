@@ -21,6 +21,7 @@ const RUNTIME = { piPackageDir: resolve(getPackageDir()), piVersion: VERSION };
 type Replacement = {
   target: string;
   replacement: string;
+  optional?: boolean;
 };
 
 test("ignores payloads without system instructions", () => {
@@ -470,6 +471,73 @@ test("aborts the turn and leaves the payload unchanged when a target is missing"
       assert.match(notification, /Missing target: "missing"/);
       assert.doesNotMatch(notification, /Configured target/);
       assert.deepEqual(errors, notifications);
+    },
+  );
+});
+
+test("skips an optional rule whose target is absent and applies the others", (t) => {
+  const errors: string[] = [];
+  t.mock.method(console, "error", (message: string) => errors.push(message));
+  withProviderReplacements(
+    [
+      { target: "old wording", replacement: "unused", optional: true },
+      { target: "present", replacement: "patched" },
+      { target: "tail", replacement: "end", optional: true },
+    ],
+    () => {
+      const handler = registerExtension();
+      const { ctx, aborts, notifications } = createContext();
+      const payload = {
+        system: "present",
+        messages: [{ role: "system", content: "present tail" }],
+      };
+
+      assert.deepEqual(handler({ payload }, ctx), {
+        system: "patched",
+        messages: [{ role: "system", content: "patched end" }],
+      });
+      assert.equal(aborts.count, 0);
+      assert.deepEqual(notifications, []);
+      assert.deepEqual(errors, []);
+    },
+  );
+});
+
+test("still aborts on a missing required target when optional rules are present", (t) => {
+  t.mock.method(console, "error", () => {});
+  withProviderReplacements(
+    [
+      { target: "absent", replacement: "unused", optional: true },
+      { target: "missing", replacement: "unused", optional: false },
+    ],
+    () => {
+      const handler = registerExtension();
+      const { ctx, aborts, notifications } = createContext();
+      const payload = { system: "present" };
+
+      assert.equal(handler({ payload }, ctx), undefined);
+      assert.deepEqual(payload, { system: "present" });
+      assert.equal(aborts.count, 1);
+      assert.match(getOnlyNotification(notifications), /replacement 2 target was not found/);
+    },
+  );
+});
+
+test("rejects a non-boolean optional flag and sends the original request", (t) => {
+  t.mock.method(console, "error", () => {});
+  withFiles(
+    { providers: { cult: { replacementFile: "replacements.json" } } },
+    { "replacements.json": [{ target: "old", replacement: "new", optional: "yes" }] },
+    () => {
+      const handler = registerExtension();
+      const { ctx, aborts, notifications } = createContext();
+
+      assert.equal(handler({ payload: { system: "old" } }, ctx), undefined);
+      assert.equal(aborts.count, 0);
+      assert.match(
+        getOnlyNotification(notifications),
+        /replacement 1 optional must be true or false/,
+      );
     },
   );
 });

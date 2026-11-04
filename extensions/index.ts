@@ -35,6 +35,8 @@ export type PromptPatcherApi = {
 type Replacement = {
   target: string;
   replacement: string;
+  /** An optional rule applies where its target occurs and is skipped where it does not. */
+  optional: boolean;
 };
 
 type ExpandedReplacement = Replacement & {
@@ -66,7 +68,7 @@ type Settings = {
   providers: Record<string, ProviderSettings>;
 };
 
-export const MINIMUM_PI_VERSION = "1.4.0";
+export const MINIMUM_PI_VERSION = "1.5.0";
 
 /** Compare dotted numeric release versions; prerelease suffixes rank below their release. */
 export function atLeastVersion(version: unknown, minimum: string): boolean {
@@ -124,9 +126,10 @@ export default function systemPromptPatcher(pi: PromptPatcherApi) {
 
     // Pi resolves its documentation paths the same way when it builds the system prompt.
     const values = { piPackageDir: resolve(getPackageDir()), piVersion: VERSION };
-    const expanded = replacements.map(({ target, replacement }) => ({
+    const expanded = replacements.map(({ target, replacement, optional }) => ({
       target: expandPlaceholders(target, values),
       replacement: expandPlaceholders(replacement, values),
+      optional,
       configuredTarget: target,
     }));
     return patchSystemPrompt(event.payload, expanded, replacementPath, ctx);
@@ -151,14 +154,17 @@ function patchSystemPrompt(
 
   let patched = payload;
 
-  for (const [index, { target, replacement, configuredTarget }] of replacements.entries()) {
+  for (const [
+    index,
+    { target, replacement, optional, configuredTarget },
+  ] of replacements.entries()) {
     let found = false;
     patched = mapSystemPromptText(patched, (text) => {
       if (text.includes(target)) found = true;
       return text.replaceAll(target, replacement);
     });
 
-    if (!found) {
+    if (!found && !optional) {
       reportMissingTarget(ctx, index, target, configuredTarget, replacementPath);
       return undefined;
     }
@@ -353,7 +359,7 @@ function loadReplacements(
       return;
     }
 
-    const { target, replacement } = item;
+    const { target, replacement, optional = false } = item;
     if (!isString(target) || target.length === 0) {
       reportError(
         ctx,
@@ -367,7 +373,12 @@ function loadReplacements(
       return;
     }
 
-    replacements.push({ target, replacement });
+    if (typeof optional !== "boolean") {
+      reportError(ctx, `${EXTENSION_ID}: replacement ${index + 1} optional must be true or false.`);
+      return;
+    }
+
+    replacements.push({ target, replacement, optional });
   }
 
   return replacements;

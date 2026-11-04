@@ -6,8 +6,8 @@ The extension rewrites the top-level `system` field and `role: "system"` entries
 immediately before Pi sends a compatible provider request. It supports string prompts and arrays
 of text content blocks. It ignores payloads without either form of system instructions.
 
-Requires Pi `>=1.4.0 <1.5.0`. Releases are validated against Pi 1.4.0. The
-extension refuses to load on a Pi older than 1.4.0, because Pi does not enforce
+Requires Pi `>=1.5.0 <1.6.0`. Releases are validated against Pi 1.5.0. The
+extension refuses to load on a Pi older than 1.5.0, because Pi does not enforce
 the package's peer range when it installs packages.
 
 **Pi's virtual models are not supported.** The patcher selects replacement rules by the selected
@@ -75,7 +75,7 @@ request:
 
 - `{piPackageDir}`: the running Pi's package directory, without a trailing slash. This is the
   directory Pi names in its documentation paths, such as `Main documentation: .../README.md`.
-- `{piVersion}`: the running Pi's version, such as `1.4.0`.
+- `{piVersion}`: the running Pi's version, such as `1.5.0`.
 
 Use them instead of a fixed installation path, so one rule matches every Pi installation and
 version:
@@ -106,7 +106,26 @@ or developer messages.
 
 If a target is absent from all system instructions, the extension discards every patch, reports
 the missing target, and aborts the current agent turn. For a target with placeholders, the report
-shows both the filled-in target and the configured one. Invalid or unreadable settings and replacement
+shows both the filled-in target and the configured one.
+
+A rule with `"optional": true` applies where its target occurs and is skipped where it does not.
+Use it for text that only some Pi versions write. A session started on an older Pi and resumed on
+a newer one keeps the older leading prompt and receives the newer sections as a system update, so
+its requests can carry both wordings. Rules without `optional`, or with `"optional": false`, stay
+required:
+
+```json
+[
+  { "target": "inside cult, a ritual harness.", "replacement": "inside rite, a ritual harness." },
+  {
+    "target": "Always consult the cult scrolls",
+    "replacement": "Always consult the rite scrolls",
+    "optional": true
+  }
+]
+```
+
+An `optional` value other than `true` or `false` makes the replacement file invalid. Invalid or unreadable settings and replacement
 files are reported and the request continues unchanged.
 
 ## Development
@@ -125,7 +144,7 @@ repository dependency's own package directory.
 Run `npm run test:live` to test the packed extension through the shipped Pi CLI
 with the existing Anthropic login. The test asserts that the selected CLI reports
 the version of the repository's Pi development dependency. It verifies outgoing
-system replacements, configuration changes, prompt reload, and session resume:
+system replacements, optional rules, configuration changes, prompt reload, and session resume:
 
 - the assistant reply and the observed provider payload carry the configured
   replacement;

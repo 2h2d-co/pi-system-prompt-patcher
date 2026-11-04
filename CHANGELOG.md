@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### Added
+
+- Replacement rules accept `"optional": true`. An optional rule applies where its target occurs and
+  is skipped where it does not, so one replacement file can cover the prompts of two Pi versions
+  and of sessions resumed across an upgrade. Older versions ignore the field and require the rule.
+
+### Changed
+
+- Require Pi `>=1.5.0 <1.6.0`. Restart Pi after upgrading its runtime.
+- Pi 1.5.0 rewords its default system prompt. Replacement targets copied from the Pi 1.4.0 prompt,
+  such as its opening sentence, no longer match, so the extension reports them and aborts the
+  turn. Update such targets, or mark them optional, before upgrading Pi.
+
 ## [0.0.13] - 2026-10-22
 
 ### Changed

@@ -22,10 +22,17 @@ function systemPrompt(revision: number, piPackageDir: string): string {
   );
 }
 
+// The optional rules cover both outcomes: one applies where its target occurs, and the other names text
+// no prompt contains, which would abort the turn if the patcher required it.
 function rules(marker: string): string {
   return JSON.stringify([
     { target: "ORIGINAL_MARKER", replacement: marker },
-    { target: "Documentation: {piPackageDir}/README.md.", replacement: "DOCS_{piVersion}." },
+    {
+      target: "Documentation: {piPackageDir}/README.md.",
+      replacement: "DOCS_{piVersion}.",
+      optional: true,
+    },
+    { target: "Text only another Pi version writes.", replacement: "unused", optional: true },
   ]);
 }
 
@@ -191,7 +198,7 @@ test(
     assert.deepEqual(await assistantTexts(client), [...history, "PATCH_SECOND"]);
     await client.stop();
     t.diagnostic(
-      `Pi ${piVersion}: packed extension, real Anthropic payloads, Pi placeholders, config reload, prompt reload, and resume passed`,
+      `Pi ${piVersion}: packed extension, real Anthropic payloads, Pi placeholders, optional rules, config reload, prompt reload, and resume passed`,
     );
   },
 );
