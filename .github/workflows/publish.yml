@@ -174,7 +174,7 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           # Publishing intentionally uses the npm 11.20.0 client bundled with Node 26.12.1.
-          # The project's Mise toolchain pins npm 11.21.0 for development only.
+          # The project's Mise toolchain pins npm 11.21.2 for development only.
           node-version: "26.12.1"
           package-manager-cache: false
 
