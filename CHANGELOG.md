@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Require Pi `>=1.5.1 <1.6.0`. Restart Pi after upgrading its runtime.
+
 ## [0.0.14] - 2026-11-04
 
 ### Added
