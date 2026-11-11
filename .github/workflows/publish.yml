@@ -175,12 +175,12 @@ jobs:
         with:
           # Publishing intentionally uses the npm 11.20.0 client bundled with Node 26.12.1.
           # The project's Mise toolchain pins npm 11.21.2 for development only.
-          node-version: "26.12.1"
+          node-version: "26.13.1"
           package-manager-cache: false
 
       - name: Verify npm publishing client
         run: |
-          test "$(node --version)" = v26.12.1
+          test "$(node --version)" = v26.13.1
           test "$(npm --version)" = 11.20.0
 
       - name: Download package archive
