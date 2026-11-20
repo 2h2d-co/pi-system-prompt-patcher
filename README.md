@@ -142,7 +142,8 @@ repository dependency's own package directory.
 ### Live validation
 
 Run `npm run test:live` to test the packed extension through the shipped Pi CLI
-with the existing Anthropic login. The test asserts that the selected CLI reports
+with the existing Anthropic login. It runs once on each of the newest Claude models: Fable 5.2,
+Opus 5.5, Sonnet 5.5, and Haiku 5.5. The test asserts that the selected CLI reports
 the version of the repository's Pi development dependency. It verifies outgoing
 system replacements, optional rules, configuration changes, prompt reload, and session resume:
 
