@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Require Pi `>=1.6.1 <1.7.0`.
+
 ## [0.0.17] - 2026-11-20
 
 ### Changed
