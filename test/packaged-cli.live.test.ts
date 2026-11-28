@@ -81,7 +81,6 @@ for (const modelId of NEWEST_CLAUDE_MODELS) {
       const env = {
         HOME: temporary,
         PI_CODING_AGENT_DIR: join(temporary, "agent"),
-        PI_TELEMETRY: "0",
         PI_PATCHER_LIVE_API_KEY: token,
       };
       assert.equal(
